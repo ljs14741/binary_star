@@ -355,7 +355,8 @@ function Hill3D({ initialTotal }: Props) {
                 <Link href={langPath(lang, room ? `/room/${room.slug}/write` : rooms[0] ? `/room/${rooms[0].slug}/write` : "")} className="btn-star pointer-events-auto flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold">
                     <PenLine size={15} /> {t("hill_write")}
                 </Link>
-                <a href="#rooms" className="pointer-events-auto flex items-center gap-1 text-[12px] text-dim">
+                {/* 세로(폰)에선 글쓰기 버튼만 (아래 안내는 숨김) */}
+                <a href="#rooms" className="pointer-events-auto hidden items-center gap-1 text-[12px] text-dim landscape:flex">
                     {t("hill_scroll")} <ChevronDown size={14} className="animate-bounce" />
                 </a>
             </div>
