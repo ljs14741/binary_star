@@ -39,6 +39,7 @@ const HIGHLIGHT_EVERY = 5.5; // 초
 const EMPTY_WAIT = 9; // 빈 별자리에 머무는 시간
 const IDLE_BEFORE_AUTO = 20; // 마지막 조작 뒤 이만큼 지나야 다음 별자리로 자동으로 넘어감
 const WAVE_SEC = 2.2;
+const PORTRAIT_CAM_FWD = 3.2; // 세로 화면에서 카메라가 섬 쪽으로 다가가는 거리
 const DEG = Math.PI / 180;
 const CAM_Y = SKY_ORIGIN.y;
 
@@ -161,7 +162,7 @@ export class HillScene {
     private index = 0;
     private dragging = false;
     // walk: 땅(섬)을 잡고 끌면 내 요정이 손가락을 따라 걸음. look: 하늘을 끌면 돌아봄
-    private pointer: { x: number; y: number; moved: boolean; id: number; startView: number; lastX: number; lastT: number; vel: number; mode: "look" | "walk" } | null = null;
+    private pointer: { x: number; y: number; moved: boolean; id: number; startView: number; lastX: number; lastT: number; vel: number; mode: "look" | "walk"; g0: { x: number; z: number } | null; me0: { x: number; z: number } | null } | null = null;
     private lastInputAt = -IDLE_BEFORE_AUTO;
     private lastWalkSend = 0;
     private walkMark: THREE.Mesh | null = null;
@@ -896,8 +897,10 @@ export class HillScene {
         this.lastInputAt = this.clock.getElapsedTime();
         // 섬(땅)이나 내 요정 근처를 잡았으면 걷기, 아니면 하늘 돌리기
         const rect = this.canvas.getBoundingClientRect();
-        const mode = this.meId != null && (this.groundAt(e.clientX, e.clientY) || this.meTapped(e.clientX, e.clientY, rect, 48)) ? "walk" : "look";
-        this.pointer = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId, startView: this.view, lastX: e.clientX, lastT: performance.now(), vel: 0, mode };
+        const g0 = this.groundAt(e.clientX, e.clientY);
+        const mode = this.meId != null && (g0 || this.meTapped(e.clientX, e.clientY, rect, 48)) ? "walk" : "look";
+        const me = this.meId != null ? this.people.get(this.meId) : null;
+        this.pointer = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId, startView: this.view, lastX: e.clientX, lastT: performance.now(), vel: 0, mode, g0, me0: me ? { x: me.pos.x, z: me.pos.y } : null };
         if (mode === "look") {
             this.viewTarget = null;
             this.viewVel = 0;
@@ -912,10 +915,15 @@ export class HillScene {
         if (!this.pointer.moved && Math.hypot(dx, dy) < 8) return;
         this.pointer.moved = true;
         if (this.pointer.mode === "walk") {
-            // 손가락이 있는 땅으로 걸어감. 섬 밖이면 마지막 자리 유지
+            // 잡은 지점에서 손가락이 움직인 만큼 요정이 따라감 (요정을 잡고 끄는 느낌). 섬 밖이면 마지막 자리 유지
             const g = this.groundAt(e.clientX, e.clientY);
             if (g) {
-                this.walkTo(g.x, g.z, true);
+                const p = this.pointer;
+                if (!p.g0) p.g0 = g;
+                const base = p.me0 ?? g;
+                const tx = THREE.MathUtils.clamp(base.x + (g.x - p.g0.x), -HILL_HALF_W, HILL_HALF_W);
+                const tz = THREE.MathUtils.clamp(base.z + (g.z - p.g0.z), -HILL_HALF_D, HILL_HALF_D);
+                this.walkTo(tx, tz, true);
                 this.lastInputAt = this.clock.getElapsedTime();
             }
             return;
@@ -1188,9 +1196,12 @@ export class HillScene {
             if (near !== this.index) this.select(near);
         }
         this.pitch += (this.pitchTarget - this.pitch) * Math.min(1, dt * 6);
-        this.camera.position.set(SKY_ORIGIN.x, CAM_Y + this.pitch * 2, SKY_ORIGIN.z);
+        // 세로(폰)에선 카메라를 섬 쪽으로 당겨 요정이 크게 보임. 하늘은 멀어서 거의 그대로
+        const fwd = this.portrait ? PORTRAIT_CAM_FWD : 0;
+        const cx = SKY_ORIGIN.x + Math.sin(this.view) * fwd, cz = SKY_ORIGIN.z - Math.cos(this.view) * fwd;
+        this.camera.position.set(cx, CAM_Y + this.pitch * 2, cz);
         const lookY = CAM_Y + 20 * Math.tan(SKY_V_CENTER * DEG) + this.pitch * 14;
-        this.camera.lookAt(SKY_ORIGIN.x + Math.sin(this.view) * 20, lookY, SKY_ORIGIN.z - Math.cos(this.view) * 20);
+        this.camera.lookAt(cx + Math.sin(this.view) * 20, lookY, cz - Math.cos(this.view) * 20);
 
         this.scenery.update(now, dt, this.view);
         this.exportHorizon();
