@@ -1,8 +1,8 @@
 "use client";
-// 언덕 소리: 파일 없이 WebAudio 로 합성. 배경(잔잔한 화음·파도·모닥불·가끔 울리는 종) + 효과음(공감·새 별·별똥별·의식)
+// 언덕 소리: 파일 없이 WebAudio 로 합성. 효과음만(공감·새 별·별똥별·의식·반짝임). 배경음은 폰 스피커에서 이상하게 들려 뺌
 // 브라우저 자동재생 제한 때문에 start() 는 반드시 사용자 입력(터치·클릭·키) 안에서 불러야 함
 
-export type Sfx = "empathy" | "empathyFar" | "born" | "meteor" | "daily" | "select" | "twinkle" | "lighthouse";
+export type Sfx = "empathy" | "empathyFar" | "born" | "meteor" | "daily" | "twinkle" | "lighthouse";
 
 const PREF_KEY = "star_sound";
 
@@ -19,27 +19,13 @@ export function setSoundPref(on: boolean) {
     } catch {}
 }
 
-// 펜타토닉 (A 단조 느낌): 종소리·반짝임에 씀
+// 펜타토닉 (A 단조 느낌): 반짝임에 씀
 const PENTA = [440, 523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66];
-// 배경 화음 진행 (Am → F → C → G), 낮게
-const CHORDS: number[][] = [
-    [220, 261.63, 329.63],
-    [174.61, 220, 261.63],
-    [196, 261.63, 329.63],
-    [196, 246.94, 293.66],
-];
 
 export class Sound {
     private ctx: AudioContext | null = null;
     private master: GainNode | null = null;
-    private bgm: GainNode | null = null;
     private running = false;
-    private timer: ReturnType<typeof setTimeout> | null = null;
-    private nextChord = 0;
-    private chordIdx = 0;
-    private nextBell = 0;
-    private nextCrackle = 0;
-    private crackleGain: GainNode | null = null;
     private noise: AudioBuffer | null = null;
     private lastSfx = new Map<Sfx, number>();
 
@@ -65,8 +51,7 @@ export class Sound {
             const now = this.ctx.currentTime;
             this.master!.gain.cancelScheduledValues(now);
             this.master!.gain.setValueAtTime(this.master!.gain.value, now);
-            this.master!.gain.linearRampToValueAtTime(0.8, now + 2.5);
-            this.startBgm();
+            this.master!.gain.linearRampToValueAtTime(0.8, now + 1.2);
         } catch {
             this.running = false;
         }
@@ -79,15 +64,6 @@ export class Sound {
         this.master.gain.cancelScheduledValues(now);
         this.master.gain.setValueAtTime(this.master.gain.value, now);
         this.master.gain.linearRampToValueAtTime(0, now + 1.2);
-        if (this.timer) clearTimeout(this.timer);
-        this.timer = null;
-        const bgm = this.bgm;
-        this.bgm = null;
-        setTimeout(() => {
-            try {
-                bgm?.disconnect();
-            } catch {}
-        }, 1500);
     }
 
     // 화면 숨길 때 잠깐 멈춤
@@ -104,7 +80,7 @@ export class Sound {
         const d = buf.getChannelData(0);
         let last = 0;
         for (let i = 0; i < len; i++) {
-            // 갈색 소음 (낮은 쪽이 많아 파도 같음)
+            // 갈색 소음 (별똥별 바람 소리에 씀)
             const w = Math.random() * 2 - 1;
             last = (last + 0.02 * w) / 1.02;
             d[i] = last * 3.5;
@@ -112,104 +88,7 @@ export class Sound {
         return buf;
     }
 
-    private startBgm() {
-        const ctx = this.ctx!;
-        const bgm = ctx.createGain();
-        bgm.gain.value = 1;
-        bgm.connect(this.master!);
-        this.bgm = bgm;
-
-        // 파도: 갈색 소음 → 저역 통과 → 아주 느린 LFO 로 밀려오고 물러남
-        const waves = ctx.createBufferSource();
-        waves.buffer = this.noise;
-        waves.loop = true;
-        const lp = ctx.createBiquadFilter();
-        lp.type = "lowpass";
-        lp.frequency.value = 420;
-        const wg = ctx.createGain();
-        wg.gain.value = 0.16;
-        const lfo = ctx.createOscillator();
-        lfo.frequency.value = 0.09;
-        const lfoG = ctx.createGain();
-        lfoG.gain.value = 0.1;
-        lfo.connect(lfoG).connect(wg.gain);
-        waves.connect(lp).connect(wg).connect(bgm);
-        waves.start();
-        lfo.start();
-
-        // 모닥불: 백색 소음 → 고역 통과 → 짧은 터짐을 무작위로
-        const fire = ctx.createBufferSource();
-        fire.buffer = this.noise;
-        fire.loop = true;
-        fire.playbackRate.value = 2.5;
-        const hp = ctx.createBiquadFilter();
-        hp.type = "highpass";
-        hp.frequency.value = 1800;
-        const cg = ctx.createGain();
-        cg.gain.value = 0;
-        const pan = ctx.createStereoPanner();
-        pan.pan.value = -0.25;
-        fire.connect(hp).connect(cg).connect(pan).connect(bgm);
-        fire.start();
-        this.crackleGain = cg;
-
-        this.nextChord = ctx.currentTime + 0.3;
-        this.nextBell = ctx.currentTime + 4;
-        this.nextCrackle = ctx.currentTime + 0.5;
-        this.schedule();
-    }
-
-    // 1초 앞을 미리 예약하는 스케줄러
-    private schedule = () => {
-        if (!this.running || !this.ctx || !this.bgm) return;
-        const ctx = this.ctx;
-        const until = ctx.currentTime + 1.2;
-        while (this.nextChord < until) {
-            this.playChord(CHORDS[this.chordIdx % CHORDS.length], this.nextChord, 9);
-            this.chordIdx++;
-            this.nextChord += 8;
-        }
-        while (this.nextBell < until) {
-            const f = PENTA[Math.floor(Math.random() * PENTA.length)];
-            this.bell(f, this.nextBell, 0.05 + Math.random() * 0.04, (Math.random() - 0.5) * 1.2, 2.2);
-            this.nextBell += 3.5 + Math.random() * 6;
-        }
-        while (this.nextCrackle < until && this.crackleGain) {
-            const g = this.crackleGain.gain;
-            const a = 0.05 + Math.random() * 0.2;
-            const d = 0.01 + Math.random() * 0.05;
-            g.setValueAtTime(0, this.nextCrackle);
-            g.linearRampToValueAtTime(a, this.nextCrackle + 0.004);
-            g.exponentialRampToValueAtTime(0.0005, this.nextCrackle + d);
-            this.nextCrackle += 0.06 + Math.random() * 0.35;
-        }
-        this.timer = setTimeout(this.schedule, 500);
-    };
-
-    private playChord(freqs: number[], at: number, dur: number) {
-        const ctx = this.ctx!, out = this.bgm!;
-        for (const f of freqs) {
-            for (const det of [-3, 3]) {
-                const o = ctx.createOscillator();
-                o.type = "triangle";
-                o.frequency.value = f;
-                o.detune.value = det;
-                const lp = ctx.createBiquadFilter();
-                lp.type = "lowpass";
-                lp.frequency.value = 520;
-                const g = ctx.createGain();
-                g.gain.setValueAtTime(0, at);
-                g.gain.linearRampToValueAtTime(0.028, at + 2.8);
-                g.gain.setValueAtTime(0.028, at + dur - 3.2);
-                g.gain.linearRampToValueAtTime(0, at + dur);
-                o.connect(lp).connect(g).connect(out);
-                o.start(at);
-                o.stop(at + dur + 0.1);
-            }
-        }
-    }
-
-    private bell(freq: number, at: number, vol: number, panV: number, decay: number, out: AudioNode | null = this.bgm) {
+    private bell(freq: number, at: number, vol: number, panV: number, decay: number, out: AudioNode | null = this.master) {
         const ctx = this.ctx!;
         if (!out) return;
         const o = ctx.createOscillator();
@@ -282,9 +161,6 @@ export class Sound {
                 this.whoosh(now, 0.12, 400, 4000, 1.6);
                 [440, 554.37, 659.25, 880].forEach((f, i) => this.bell(f, now + 1.2 + i * 0.12, 0.14, (i - 1.5) * 0.3, 3.2, out));
                 this.bell(1760, now + 1.9, 0.07, 0, 3.5, out);
-                break;
-            case "select":
-                this.bell(1174.66, now, 0.05, 0, 0.35, out);
                 break;
             case "twinkle":
                 this.bell(PENTA[4 + Math.floor(Math.random() * 4)], now, 0.035, (Math.random() - 0.5) * 0.8, 1.4, out);

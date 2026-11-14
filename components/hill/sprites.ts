@@ -18,8 +18,8 @@ function makeTexture(c: HTMLCanvasElement): THREE.Texture {
     return t;
 }
 
-export type CreatureKind = "idle" | "blink" | "lookup" | "walk1" | "walk2" | "happy";
-export const CREATURE_KINDS: CreatureKind[] = ["idle", "blink", "lookup", "walk1", "walk2", "happy"];
+export type CreatureKind = "idle" | "blink" | "lookup" | "walk1" | "walk2" | "happy" | "wave1" | "wave2";
+export const CREATURE_KINDS: CreatureKind[] = ["idle", "blink", "lookup", "walk1", "walk2", "happy", "wave1", "wave2"];
 export type Palette = { body: string; shade: string; glow: string };
 
 // 다른 사람 색 (id 로 돌려 씀). 나는 따뜻한 노랑
@@ -39,6 +39,7 @@ export function creatureTexture(kind: CreatureKind, pal: Palette): THREE.Texture
     const g = c.getContext("2d")!;
     g.clearRect(0, 0, 128, 128);
     const walk = kind === "walk1" || kind === "walk2";
+    const wave = kind === "wave1" || kind === "wave2";
     const sx = kind === "walk1" ? 0.94 : kind === "walk2" ? 1.06 : 1;
     const sy = kind === "walk1" ? 1.06 : kind === "walk2" ? 0.95 : 1;
     const cx = 64, cy = 74, r = 30;
@@ -61,7 +62,12 @@ export function creatureTexture(kind: CreatureKind, pal: Palette): THREE.Texture
     g.moveTo(-r * 0.75, 2);
     g.lineTo(-r * 1.05 * armOut, armY + (kind === "walk2" ? 8 : 0));
     g.moveTo(r * 0.75, 2);
-    g.lineTo(r * 1.05 * armOut, armY + (kind === "walk1" ? 8 : 0));
+    if (wave) {
+        // 오른팔을 번쩍 들어 좌우로 흔듦 (wave1 ↔ wave2 번갈아)
+        const tilt = kind === "wave1" ? -0.35 : 0.25;
+        g.lineTo(r * (0.95 + tilt * 0.4), -r * 0.45);
+        g.lineTo(r * (1.15 + tilt), -r * 1.2);
+    } else g.lineTo(r * 1.05 * armOut, armY + (kind === "walk1" ? 8 : 0));
     g.stroke();
     // 몸 (물방울처럼 위가 살짝 뾰족)
     const body = g.createRadialGradient(-r * 0.35, -r * 0.4, r * 0.1, 0, 0, r * 1.15);
@@ -121,7 +127,7 @@ export function creatureTexture(kind: CreatureKind, pal: Palette): THREE.Texture
     g.strokeStyle = "#1b1a2e";
     g.lineWidth = 2;
     g.beginPath();
-    if (kind === "happy") g.arc(0, ey + 9, 4, 0.15 * Math.PI, 0.85 * Math.PI);
+    if (kind === "happy" || wave) g.arc(0, ey + 9, 4, 0.15 * Math.PI, 0.85 * Math.PI);
     else g.arc(0, ey + 8, 2.4, 0.2 * Math.PI, 0.8 * Math.PI);
     g.stroke();
     g.restore();

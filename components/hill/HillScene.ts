@@ -6,7 +6,7 @@
 import * as THREE from "three";
 import type { SkyData, SkyStar } from "@/lib/hill";
 import type { Lang } from "@/lib/i18n/config";
-import type { MemberPublic, Pose, StarEvent } from "@/lib/realtime/protocol";
+import type { Gesture, MemberPublic, Pose, StarEvent } from "@/lib/realtime/protocol";
 import { FIRE_POS, HILL_HALF_D, HILL_HALF_W } from "@/lib/realtime/protocol";
 import type { Sfx } from "@/lib/sound";
 import { CREATURE_KINDS, creatureTexture, glowTexture, heartTexture, ME_PALETTE, PALETTES, textTexture, wrapTitle, type CreatureKind, type Palette } from "./sprites";
@@ -26,6 +26,8 @@ export type SceneOpts = {
     onIndexChange: (index: number) => void;
     onHighlight: (h: HighlightInfo) => void;
     onSfx: (name: Sfx) => void;
+    // 내 요정을 눌렀을 때(손 흔들기 등) 서버로 보낼 몸짓
+    onGesture: (g: Gesture) => void;
     reduceMotion: boolean;
 };
 
@@ -35,6 +37,8 @@ const KEY_SEND_MS = 150;
 const MAX_STARS = 320;
 const HIGHLIGHT_EVERY = 5.5; // 초
 const EMPTY_WAIT = 9; // 빈 별자리에 머무는 시간
+const IDLE_BEFORE_AUTO = 20; // 마지막 조작 뒤 이만큼 지나야 다음 별자리로 자동으로 넘어감
+const WAVE_SEC = 2.2;
 const DEG = Math.PI / 180;
 const CAM_Y = SKY_ORIGIN.y;
 
@@ -57,6 +61,7 @@ type Person = {
     lookUntil: number;
     happyUntil: number;
     walkUntil: number;
+    waveUntil: number;
     hearts: { sprite: THREE.Sprite; born: number }[];
 };
 
@@ -155,7 +160,12 @@ export class HillScene {
     private pitchTarget = 0;
     private index = 0;
     private dragging = false;
-    private pointer: { x: number; y: number; moved: boolean; id: number; startView: number; lastX: number; lastT: number; vel: number } | null = null;
+    // walk: 땅(섬)을 잡고 끌면 내 요정이 손가락을 따라 걸음. look: 하늘을 끌면 돌아봄
+    private pointer: { x: number; y: number; moved: boolean; id: number; startView: number; lastX: number; lastT: number; vel: number; mode: "look" | "walk" } | null = null;
+    private lastInputAt = -IDLE_BEFORE_AUTO;
+    private lastWalkSend = 0;
+    private walkMark: THREE.Mesh | null = null;
+    private walkMarkUntil = 0;
     private ray = new THREE.Raycaster();
     private visible = true;
     private disposed = false;
@@ -188,15 +198,15 @@ export class HillScene {
         this.scenery = new Scenery({ reduceMotion: opts.reduceMotion, isMobile }, FIRE_POS.x, FIRE_POS.z, hillHeight(FIRE_POS.x, FIRE_POS.z));
         this.scene.add(this.scenery.group);
 
-        // 달 (오른쪽 위)
+        // 달: 정면 왼쪽, 바다 위 낮게 (별자리 고리 아래·수평선 위. 폰 첫 화면에서 안 올려도 보임)
         const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,236,196"), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
-        const moonAt = fromAngles(62, 52, DOME_R * 1.1);
+        const moonAt = fromAngles(-9, 9.5, DOME_R * 1.1);
         moonGlow.position.set(moonAt.x, moonAt.y, moonAt.z);
-        moonGlow.scale.set(26, 26, 1);
+        moonGlow.scale.set(20, 20, 1);
         this.scene.add(moonGlow);
         const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,244,214"), transparent: true, opacity: 1, depthWrite: false }));
         moon.position.copy(moonGlow.position);
-        moon.scale.set(5.5, 5.5, 1);
+        moon.scale.set(6.2, 6.2, 1);
         this.scene.add(moon);
 
         const bg = this.makeBackgroundStars(isMobile ? 600 : 900);
@@ -479,11 +489,11 @@ export class HillScene {
     }
 
     // 별자리 고르기 (‹ › · 띠 · 쓸기 · 별자리 누르기). 카메라가 그쪽으로 돎
-    goTo(index: number, silent = false) {
+    goTo(index: number) {
         if (this.constellations.length === 0) return;
         const n = this.constellations.length;
         const next = ((index % n) + n) % n;
-        this.select(next, silent);
+        this.select(next);
         // 가장 가까운 방향으로 돌기
         const want = this.constellations[next].cell.az * DEG;
         const cur = this.view;
@@ -509,7 +519,7 @@ export class HillScene {
         this.goTo(this.index + dir);
     }
 
-    private select(next: number, silent = false) {
+    private select(next: number) {
         if (next === this.index) return;
         this.index = next;
         this.opts.onIndexChange(next);
@@ -518,7 +528,6 @@ export class HillScene {
         this.highlightAt = this.clock.getElapsedTime() + (this.constellations[next]?.starIds.length ? 0.9 : EMPTY_WAIT);
         this.setHighlight(null);
         this.applySelection();
-        if (!silent) this.opts.onSfx("select");
     }
 
     // 지금 보는 방향에서 가장 가까운 별자리
@@ -578,13 +587,18 @@ export class HillScene {
     private advanceHighlight(): number {
         const c = this.constellations[this.index];
         if (!c) return HIGHLIGHT_EVERY;
+        // 방금 조작했으면(걷기·끌기·누르기) 별자리를 자동으로 바꾸지 않음. 지금 별자리의 별만 돌림
+        const idle = this.clock.getElapsedTime() - this.lastInputAt >= IDLE_BEFORE_AUTO;
         if (c.starIds.length === 0) {
-            this.goToRoom(1);
+            if (idle) this.goToRoom(1);
             return HIGHLIGHT_EVERY;
         }
         if (this.highlightCursor + 1 >= c.starIds.length) {
-            this.goToRoom(1);
-            return 0.9;
+            if (idle) {
+                this.goToRoom(1);
+                return 0.9;
+            }
+            this.highlightCursor = -1;
         }
         this.highlightCursor++;
         const i = this.starIndex.get(c.starIds[this.highlightCursor]);
@@ -725,10 +739,33 @@ export class HillScene {
         for (const id of [...this.people.keys()]) if (!keep.has(id)) this.removePerson(id);
         this.meId = you.id;
         for (const m of [you, ...members]) this.upsert(m, true);
+        // 내가 언덕에 들어오며 인사 (다른 사람 화면에선 합류 때 흔듦)
+        this.gesture(you.id, "wave");
+    }
+
+    // 몸짓 (서버에서 온 것. 내 것도 서버를 거쳐 옴)
+    gesture(id: number, g: Gesture) {
+        const p = this.people.get(id);
+        if (!p) return;
+        const now = this.clock.getElapsedTime();
+        if (g === "wave") p.waveUntil = now + WAVE_SEC;
+        else if (g === "lookup") p.lookUntil = now + 2.5;
+        else if (g === "hug") p.happyUntil = now + 1.6;
+    }
+
+    // 내 요정이 손 흔듦 (바로 보여 주고, 서버로도 보냄)
+    waveMe() {
+        if (this.meId == null) return;
+        this.gesture(this.meId, "wave");
+        this.opts.onGesture("wave");
     }
 
     applyTick(moved: [number, number, number, Pose][], joined: MemberPublic[], left: number[]) {
-        for (const m of joined) this.upsert(m, true);
+        for (const m of joined) {
+            this.upsert(m, true);
+            // 새로 온 사람은 한 번 손 흔들며 인사
+            this.gesture(m.id, "wave");
+        }
         for (const id of left) this.removePerson(id);
         for (const [id, x, z, p] of moved) {
             const person = this.people.get(id);
@@ -738,13 +775,6 @@ export class HillScene {
         }
     }
 
-    moveMe(x: number, z: number) {
-        if (this.meId == null) return;
-        const me = this.people.get(this.meId);
-        if (!me) return;
-        me.target.set(x, z);
-        me.pose = "sit";
-    }
 
     // 방향키: 누르는 동안만 매 프레임 움직임 (루프에서 호출)
     private stepKeys(dt: number, now: number) {
@@ -813,7 +843,7 @@ export class HillScene {
             group.add(glow);
             this.scene.add(group);
             const now = this.clock.getElapsedTime();
-            p = { id: m.id, group, body, glow, pal, target: new THREE.Vector2(m.x, m.z), pos: new THREE.Vector2(m.x, m.z), pose: m.p, bob: Math.random() * 6.28, nextBlink: now + 2 + Math.random() * 4, blinkUntil: 0, lookUntil: 0, happyUntil: 0, walkUntil: 0, hearts: [] };
+            p = { id: m.id, group, body, glow, pal, target: new THREE.Vector2(m.x, m.z), pos: new THREE.Vector2(m.x, m.z), pose: m.p, bob: Math.random() * 6.28, nextBlink: now + 2 + Math.random() * 4, blinkUntil: 0, lookUntil: 0, happyUntil: 0, walkUntil: 0, waveUntil: 0, hearts: [] };
             this.people.set(m.id, p);
             this.applyLook(p);
         } else {
@@ -860,9 +890,15 @@ export class HillScene {
 
     // ---------- 입력 ----------
     private onDown = (e: PointerEvent) => {
-        this.pointer = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId, startView: this.view, lastX: e.clientX, lastT: performance.now(), vel: 0 };
-        this.viewTarget = null;
-        this.viewVel = 0;
+        this.lastInputAt = this.clock.getElapsedTime();
+        // 섬(땅)이나 내 요정 근처를 잡았으면 걷기, 아니면 하늘 돌리기
+        const rect = this.canvas.getBoundingClientRect();
+        const mode = this.meId != null && (this.groundAt(e.clientX, e.clientY) || this.meTapped(e.clientX, e.clientY, rect, 48)) ? "walk" : "look";
+        this.pointer = { x: e.clientX, y: e.clientY, moved: false, id: e.pointerId, startView: this.view, lastX: e.clientX, lastT: performance.now(), vel: 0, mode };
+        if (mode === "look") {
+            this.viewTarget = null;
+            this.viewVel = 0;
+        }
         try {
             this.canvas.setPointerCapture(e.pointerId);
         } catch {}
@@ -872,6 +908,15 @@ export class HillScene {
         const dx = e.clientX - this.pointer.x, dy = e.clientY - this.pointer.y;
         if (!this.pointer.moved && Math.hypot(dx, dy) < 8) return;
         this.pointer.moved = true;
+        if (this.pointer.mode === "walk") {
+            // 손가락이 있는 땅으로 걸어감. 섬 밖이면 마지막 자리 유지
+            const g = this.groundAt(e.clientX, e.clientY);
+            if (g) {
+                this.walkTo(g.x, g.z, true);
+                this.lastInputAt = this.clock.getElapsedTime();
+            }
+            return;
+        }
         this.dragging = true;
         const w = this.canvas.clientWidth || 390;
         // 화면 폭만큼 끌면 화각만큼 돎 (손에 붙어 도는 느낌)
@@ -889,6 +934,12 @@ export class HillScene {
         const p = this.pointer;
         this.pointer = null;
         if (!p) return;
+        this.lastInputAt = this.clock.getElapsedTime();
+        if (p.moved && p.mode === "walk") {
+            const me = this.people.get(this.meId ?? -1);
+            if (me) this.opts.onWalk(Math.round(me.target.x * 10) / 10, Math.round(me.target.y * 10) / 10, false);
+            return;
+        }
         if (p.moved) {
             this.dragging = false;
             // 놓은 속도로 조금 더 돎 (관성)
@@ -907,6 +958,7 @@ export class HillScene {
     }
     private onKey = (e: KeyboardEvent) => {
         if (HillScene.isTyping(e)) return;
+        this.lastInputAt = this.clock.getElapsedTime();
         if (e.key === "ArrowLeft" && e.shiftKey) this.goTo(this.index - 1);
         else if (e.key === "ArrowRight" && e.shiftKey) this.goTo(this.index + 1);
         else if (["ArrowLeft", "ArrowRight", "ArrowUp", "ArrowDown", "w", "a", "s", "d"].includes(e.key)) this.keys.add(e.key);
@@ -928,6 +980,17 @@ export class HillScene {
         const rect = this.canvas.getBoundingClientRect();
         const nx = ((cx - rect.left) / rect.width) * 2 - 1;
         const ny = -((cy - rect.top) / rect.height) * 2 + 1;
+        // 내 요정을 누르면 손 흔들기
+        if (this.meTapped(cx, cy, rect)) {
+            this.waveMe();
+            return;
+        }
+        // 땅(섬)을 누르면 거기로 걸어감. 별·별자리 판정보다 먼저 (폰에서 요정 근처를 눌러도 별자리로 안 넘어가게)
+        const ground = this.groundAt(cx, cy);
+        if (ground) {
+            this.walkTo(ground.x, ground.z, false);
+            return;
+        }
         const hit = this.nearestStar(nx, ny, rect.width, rect.height, 28);
         if (hit != null) {
             const st = this.starList[hit];
@@ -944,19 +1007,59 @@ export class HillScene {
         }
         // 별자리 칸(이름표 포함)을 누르면 고르기
         const cell = this.cellAt(nx, ny, rect.width, rect.height);
-        if (cell != null) {
-            if (cell !== this.index) this.goTo(cell);
-            return;
-        }
+        if (cell != null && cell !== this.index) this.goTo(cell);
+    }
+
+    // 화면 좌표 → 섬 위 좌표 (섬 밖이면 null)
+    private groundAt(cx: number, cy: number): { x: number; z: number } | null {
+        const rect = this.canvas.getBoundingClientRect();
+        const nx = ((cx - rect.left) / rect.width) * 2 - 1;
+        const ny = -((cy - rect.top) / rect.height) * 2 + 1;
         this.ray.setFromCamera(new THREE.Vector2(nx, ny), this.camera);
         const inter = this.ray.intersectObject(this.ground, false);
-        if (inter.length) {
-            const pt = inter[0].point;
-            const x = THREE.MathUtils.clamp(pt.x, -HILL_HALF_W, HILL_HALF_W);
-            const z = THREE.MathUtils.clamp(pt.z, -HILL_HALF_D, HILL_HALF_D);
-            this.moveMe(x, z);
-            this.opts.onGroundTap(Math.round(x * 10) / 10, Math.round(z * 10) / 10);
+        if (!inter.length) return null;
+        const pt = inter[0].point;
+        return { x: THREE.MathUtils.clamp(pt.x, -HILL_HALF_W, HILL_HALF_W), z: THREE.MathUtils.clamp(pt.z, -HILL_HALF_D, HILL_HALF_D) };
+    }
+
+    // 내 요정 근처를 눌렀나 (화면에서 px 안)
+    private meTapped(cx: number, cy: number, rect: DOMRect, px = 36): boolean {
+        const me = this.meId != null ? this.people.get(this.meId) : null;
+        if (!me) return false;
+        const v = new THREE.Vector3(me.group.position.x, me.group.position.y + 0.55, me.group.position.z).project(this.camera);
+        if (v.z > 1) return false;
+        const sx = rect.left + ((v.x + 1) / 2) * rect.width, sy = rect.top + ((1 - v.y) / 2) * rect.height;
+        return Math.hypot(cx - sx, cy - sy) < px;
+    }
+
+    // 걷기: 누르면 한 번 보냄, 끌면 150ms 마다 보냄. 발밑에 목표 표시
+    private walkTo(x: number, z: number, dragging: boolean) {
+        const me = this.meId != null ? this.people.get(this.meId) : null;
+        if (!me) return;
+        me.target.set(x, z);
+        me.pose = "stand";
+        this.showWalkMark(x, z);
+        const rx = Math.round(x * 10) / 10, rz = Math.round(z * 10) / 10;
+        if (!dragging) {
+            this.opts.onGroundTap(rx, rz);
+            return;
         }
+        if (performance.now() - this.lastWalkSend >= KEY_SEND_MS) {
+            this.lastWalkSend = performance.now();
+            this.opts.onWalk(rx, rz, true);
+        }
+    }
+
+    private showWalkMark(x: number, z: number) {
+        if (!this.walkMark) {
+            const m = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.3, 24), new THREE.MeshBasicMaterial({ color: 0xffe9a6, transparent: true, opacity: 0.8, depthWrite: false }));
+            m.rotation.x = -Math.PI / 2;
+            this.scene.add(m);
+            this.walkMark = m;
+        }
+        this.walkMark.position.set(x, hillHeight(x, z) + 0.04, z);
+        this.walkMark.visible = true;
+        this.walkMarkUntil = this.clock.getElapsedTime() + 1.2;
     }
 
     private cellAt(nx: number, ny: number, w: number, h: number): number | null {
@@ -977,6 +1080,15 @@ export class HillScene {
     mePos(): { x: number; z: number } | null {
         const me = this.meId != null ? this.people.get(this.meId) : null;
         return me ? { x: me.pos.x, z: me.pos.y } : null;
+    }
+
+    // 확인용: 내 요정의 화면 좌표
+    meScreen(): { x: number; y: number } | null {
+        const me = this.meId != null ? this.people.get(this.meId) : null;
+        if (!me) return null;
+        const rect = this.canvas.getBoundingClientRect();
+        const v = new THREE.Vector3(me.group.position.x, me.group.position.y + 0.55, me.group.position.z).project(this.camera);
+        return { x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height };
     }
 
     // 확인용: 카메라 방위각(도)
@@ -1054,7 +1166,7 @@ export class HillScene {
         }
         if (this.viewTarget == null) {
             const near = this.nearestToView();
-            if (near !== this.index) this.select(near, true);
+            if (near !== this.index) this.select(near);
         }
         this.pitch += (this.pitchTarget - this.pitch) * Math.min(1, dt * 6);
         this.camera.position.set(SKY_ORIGIN.x, CAM_Y + this.pitch * 2, SKY_ORIGIN.z);
@@ -1079,6 +1191,11 @@ export class HillScene {
         }
 
         this.stepKeys(dt, now);
+        if (this.walkMark && this.walkMark.visible) {
+            const left = this.walkMarkUntil - now;
+            if (left <= 0) this.walkMark.visible = false;
+            else (this.walkMark.material as THREE.MeshBasicMaterial).opacity = Math.min(0.8, left * 1.5);
+        }
 
         // 요정들
         for (const p of this.people.values()) {
@@ -1097,7 +1214,8 @@ export class HillScene {
                     p.blinkUntil = now + 0.14;
                     p.nextBlink = now + 2.5 + Math.random() * 4;
                 }
-                if (now < p.happyUntil) kind = "happy";
+                if (now < p.waveUntil) kind = Math.sin(now * 11) > 0 ? "wave1" : "wave2";
+                else if (now < p.happyUntil) kind = "happy";
                 else if (now < p.blinkUntil) kind = "blink";
                 else if (now < p.lookUntil) kind = "lookup";
             }
@@ -1202,6 +1320,10 @@ export class HillScene {
     };
 
     dispose() {
+        if (this.walkMark) {
+            this.walkMark.geometry.dispose();
+            (this.walkMark.material as THREE.Material).dispose();
+        }
         this.disposed = true;
         cancelAnimationFrame(this.raf);
         window.removeEventListener("resize", this.resize);

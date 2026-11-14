@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown, PenLine, Sparkles, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Hand, PenLine, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
 import type { SkyData } from "@/lib/hill";
 import type { StoryView } from "@/lib/stories";
 import type { StarEvent } from "@/lib/realtime/protocol";
@@ -164,6 +164,7 @@ function Hill3D({ initialTotal }: Props) {
                 onIndexChange: (i) => setIndex(i),
                 onHighlight: (h) => setHighlight(h),
                 onSfx: (name) => sound.sfx(name),
+                onGesture: (g) => bridge.send({ t: "gesture", g }),
             });
         } catch (e) {
             console.warn("[hill] 3D 실패", e);
@@ -177,7 +178,7 @@ function Hill3D({ initialTotal }: Props) {
                 scene.syncMembers(you, members);
             },
             onTick: (m, j, l) => scene.applyTick(m, j, l),
-            onGesture: () => {},
+            onGesture: (id, g) => scene.gesture(id, g),
             onStar: (e: StarEvent) => {
                 scene.starEvent(e);
                 const mine = e.from != null && e.from === bridge.meId;
@@ -289,9 +290,11 @@ function Hill3D({ initialTotal }: Props) {
                 </p>
                 <p className="flex items-center gap-1.5 text-[11px] text-muted">
                     <span className={`inline-block h-1.5 w-1.5 rounded-full ${status === "open" ? "bg-star" : "bg-dim"}`} />
-                    {shownTotal > 1 ? t("hill_watching", { n: formatNumber(shownTotal, lang) }) : t("hill_alone")}
-                    {introDone && <span className="text-dim"> · {t("hill_drag_hint")}</span>}
+                    <Users size={11} className="text-star-soft" />
+                    <span className="text-ink">{t("hill_online", { n: formatNumber(Math.max(1, shownTotal), lang) })}</span>
+                    {shownTotal <= 1 && <span className="text-dim">· {t("hill_alone")}</span>}
                 </p>
+                {introDone && <p className="text-[11px] text-dim">{t("hill_drag_hint")}</p>}
                 <AnimatePresence>
                     {toastLine && (
                         <motion.p key={toastLine} initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="rounded-full bg-star/15 px-3 py-1 text-[12px] text-star-soft">
@@ -307,10 +310,13 @@ function Hill3D({ initialTotal }: Props) {
                     {soundOn ? <Volume2 size={16} className={soundArmed ? "text-star-soft" : ""} /> : <VolumeX size={16} />}
                 </button>
                 {soundOn && !soundArmed && intro === null && <p className="rounded-full bg-night/60 px-2 py-0.5 text-[10px] text-dim">{t("hill_sound_hint")}</p>}
+                <button onClick={() => sceneRef.current?.waveMe()} aria-label={t("hill_wave")} title={t("hill_wave")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95" disabled={status !== "open"}>
+                    <Hand size={16} />
+                </button>
             </div>
 
-            {/* 가운데: 지금 밝아진 별의 첫 문장 (빈 별자리면 안내) */}
-            <div className="pointer-events-none absolute inset-x-0 top-[60%] flex justify-center px-5">
+            {/* 지금 밝아진 별의 첫 문장 (빈 별자리면 안내). 폰에선 요정들을 안 가리게 섬 아래(바다) 자리, 넓은 화면에선 가운데 */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-[6.75rem] flex justify-center px-5 sm:bottom-auto sm:top-[60%]">
                 <AnimatePresence mode="wait">
                     {slot && !room && !highlight && (
                         <motion.div key={`nozodiac-${index}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.45 }} className="glass pointer-events-auto max-w-[400px] rounded-2xl px-4 py-3 text-center">
