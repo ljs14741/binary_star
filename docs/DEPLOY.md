@@ -4,7 +4,7 @@
 - `Dockerfile` : 포트 3100, `tsx server.ts`. 시작 때 `prisma migrate deploy` + 방 보장 시드
 - `/home/binary/binaryworld/infra/docker-compose.yml` : `star` 서비스(컨테이너 `star-app`, DB `mysql-local:3306/star`) 추가됨
 - `deploy/Caddyfile.star` : Caddy 에 붙일 조각 (`star:3100`, 웹소켓은 자동 업그레이드)
-- `deploy/jenkins/config.xml` : Jenkins 잡 `binaryworld-star` (wedding 잡 복제 + 카카오·애드센스 빌드 인자)
+- Jenkins 잡 `binaryworld-star` : 사용자가 웹에서 wedding 잡 복제해 만듦(빌드 인자 없음 → 카카오·애드센스 공개 키는 Dockerfile ARG 기본값에 둠). `deploy/jenkins/config.xml` 은 참고용
 - 원격: `git@github.com:ljs14741/binary_star.git`, 브랜치 `master`
 
 ## 처음 한 번 사람이 할 것 (루트 권한·외부 계정 필요)
