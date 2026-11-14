@@ -4,7 +4,7 @@
 가입 없이 모르는 사람의 이야기를 읽고 공감하고 내 이야기를 남기는 곳. 4개 언어(ko·en·ja·zh-TW). 첫 화면 = 실시간 3D "밤의 언덕"(바다 위 섬, 하늘에 황도 12궁, 같이 앉아 있는 별 요정들). Next.js 16 + TS + Tailwind + Prisma(MySQL `star`) + three.js + ws.
 위치 `/home/binary/workspace/binary_star`. git 저장소(원격 `ljs14741/binary_star`, master). push → Jenkins → docker. 절차·남은 수작업은 `docs/DEPLOY.md`. 푸시는 사용자가 함.
 
-## 지금 상태 (2026-11-14 낮, 4차 수정 완료)
+## 지금 상태 (2026-11-14 오후, 4차 수정 완료 + star.binaryworld.kr 배포됨. push 하면 Jenkins 가 자동 배포)
 - 테스트 38 · lint · build 통과. 개발 서버 `npm run dev` (localhost:3100, 사용자는 LAN 192.168.219.x 로도 봄)
 - 하늘: 황도 12궁이 360도 고리에 늘 전부(주제 있는 7개 = 이야기 별, 없는 5개 = 흐리게 + "주제 제안하기"). 끌어서 돌아봄(관성), 위 12궁 띠로 위치. 방↔별자리 배정은 `components/hill/constellations.ts`
 - 풍경: 정면 바다·등대, 왼쪽 뒤 오로라, 모닥불, 가끔 돌고래. 소리는 파일 없이 WebAudio 합성(`lib/sound.ts`), 첫 입력 뒤 켜짐
