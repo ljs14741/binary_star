@@ -181,6 +181,7 @@ export class HillScene {
     private isMobile: boolean;
     private selScale: number;
     private portrait = false; // 세로 화면(폰): 3D 안 이름표를 숨김 (머리글에 같은 글자가 있음)
+    private horizonPct = -1; // 수평선의 화면 세로 위치(%). 바뀌면 --hill-horizon 으로 내보내 카드가 그 위에 붙음
 
     constructor(private canvas: HTMLCanvasElement, private opts: SceneOpts) {
         const isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -199,9 +200,9 @@ export class HillScene {
         this.scenery = new Scenery({ reduceMotion: opts.reduceMotion, isMobile }, FIRE_POS.x, FIRE_POS.z, hillHeight(FIRE_POS.x, FIRE_POS.z));
         this.scene.add(this.scenery.group);
 
-        // 달: 정면 왼쪽, 바다 위 낮게 (별자리 고리 아래·수평선 위. 폰 첫 화면에서 안 올려도 보임)
+        // 달: 정면 왼쪽, 바다 위 낮게 (별자리 칸 사이 az -15·고도 13. 폰 첫 화면에서 안 올려도 보이고 문장 카드에 안 가림)
         const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,236,196"), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
-        const moonAt = fromAngles(-9, 9.5, DOME_R * 1.1);
+        const moonAt = fromAngles(-15, 13, DOME_R * 1.1);
         moonGlow.position.set(moonAt.x, moonAt.y, moonAt.z);
         moonGlow.scale.set(20, 20, 1);
         this.scene.add(moonGlow);
@@ -1143,6 +1144,15 @@ export class HillScene {
         this.applyLabelVisibility();
     };
 
+    // 수평선(바다 끝, 높이 0)의 화면 세로 위치를 %로 .hill-wrap 의 --hill-horizon 에 씀. 카드·안내는 그 위에 붙어 어떤 화면 크기에서도 섬을 안 가림
+    private exportHorizon() {
+        const v = new THREE.Vector3(SKY_ORIGIN.x + Math.sin(this.view) * 300, 0, SKY_ORIGIN.z - Math.cos(this.view) * 300).project(this.camera);
+        const pct = Math.round(((1 - v.y) / 2) * 1000) / 10;
+        if (!Number.isFinite(pct) || Math.abs(pct - this.horizonPct) < 0.3) return;
+        this.horizonPct = pct;
+        this.canvas.parentElement?.style.setProperty("--hill-horizon", `${pct}%`);
+    }
+
     // 세로 화면에선 별자리 이름표(이름·주제)를 안 그림. 그 자리에 문장 카드가 옴
     private applyLabelVisibility() {
         for (const c of this.constellations) c.label.visible = c.sub.visible = !this.portrait;
@@ -1183,6 +1193,7 @@ export class HillScene {
         this.camera.lookAt(SKY_ORIGIN.x + Math.sin(this.view) * 20, lookY, SKY_ORIGIN.z - Math.cos(this.view) * 20);
 
         this.scenery.update(now, dt, this.view);
+        this.exportHorizon();
 
         // 고른 별자리가 커지고 나머지는 작아지는 움직임
         for (const c of this.constellations) {
