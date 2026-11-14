@@ -1,0 +1,184 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<flow-definition plugin="workflow-job@1549.vc8d7f497b_22f">
+  <actions>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobAction plugin="pipeline-model-definition@2.2273.v643f36ed9e94"/>
+    <org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction plugin="pipeline-model-definition@2.2273.v643f36ed9e94">
+      <jobProperties/>
+      <triggers/>
+      <parameters>
+        <string>BRANCH</string>
+        <string>CREDENTIALS</string>
+        <string>SERVICE_NAME</string>
+        <string>IMAGE_NAME</string>
+        <string>REPO_URL</string>
+        <string>DOCKERFILE</string>
+        <string>BUILD_CTX</string>
+        <string>CONTAINER_NAME</string>
+        <string>COMPOSE_FILE</string>
+        <string>NEXT_PUBLIC_KAKAO_JS_KEY</string>
+        <string>NEXT_PUBLIC_ADSENSE_CLIENT</string>
+      </parameters>
+      <options/>
+    </org.jenkinsci.plugins.pipeline.modeldefinition.actions.DeclarativeJobPropertyTrackerAction>
+  </actions>
+  <description>별말씀 star (star.binaryworld.kr)</description>
+  <keepDependencies>false</keepDependencies>
+  <properties>
+    <hudson.model.ParametersDefinitionProperty>
+      <parameterDefinitions>
+        <hudson.model.StringParameterDefinition>
+          <name>REPO_URL</name>
+          <description>별말씀 프로젝트 Git URL</description>
+          <defaultValue>https://github.com/ljs14741/binary_star.git</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BRANCH</name>
+          <description>브랜치</description>
+          <defaultValue>master</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CREDENTIALS</name>
+          <description>Git 크리덴셜 ID</description>
+          <defaultValue>github-hackathon</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>DOCKERFILE</name>
+          <description>Dockerfile 경로</description>
+          <defaultValue>Dockerfile</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>BUILD_CTX</name>
+          <description>docker build context</description>
+          <defaultValue>.</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>IMAGE_NAME</name>
+          <description>도커 이미지명</description>
+          <defaultValue>star</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>SERVICE_NAME</name>
+          <description>compose 서비스 키</description>
+          <defaultValue>star</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>CONTAINER_NAME</name>
+          <description>컨테이너 이름</description>
+          <defaultValue>star-app</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>COMPOSE_FILE</name>
+          <description>서버 공용 compose 경로</description>
+          <defaultValue>/home/binary/binaryworld/infra/docker-compose.yml</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>NEXT_PUBLIC_KAKAO_JS_KEY</name>
+          <description>카카오 JS 키 (빌드 인자)</description>
+          <defaultValue>ea07c2afa5b5a0a07737bab48ab8e3e8</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+        <hudson.model.StringParameterDefinition>
+          <name>NEXT_PUBLIC_ADSENSE_CLIENT</name>
+          <description>애드센스 클라이언트 ID (빌드 인자)</description>
+          <defaultValue>ca-pub-6890085609044109</defaultValue>
+          <trim>false</trim>
+        </hudson.model.StringParameterDefinition>
+      </parameterDefinitions>
+    </hudson.model.ParametersDefinitionProperty>
+    <org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+      <triggers>
+        <com.cloudbees.jenkins.GitHubPushTrigger plugin="github@1.45.0">
+          <spec></spec>
+        </com.cloudbees.jenkins.GitHubPushTrigger>
+      </triggers>
+    </org.jenkinsci.plugins.workflow.job.properties.PipelineTriggersJobProperty>
+  </properties>
+  <definition class="org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition" plugin="workflow-cps@4209.v83c4e257f1e9">
+    <script>pipeline {
+  agent any
+  options { timestamps() }
+
+  parameters {
+    string(name: &apos;REPO_URL&apos;,      defaultValue: &apos;https://github.com/ljs14741/binary_star.git&apos;, description: &apos;별말씀 프로젝트 Git URL&apos;)
+    string(name: &apos;BRANCH&apos;,        defaultValue: &apos;master&apos;, description: &apos;브랜치&apos;)
+    string(name: &apos;CREDENTIALS&apos;,   defaultValue: &apos;github-hackathon&apos;, description: &apos;Git 크리덴셜 ID&apos;)
+    string(name: &apos;DOCKERFILE&apos;,    defaultValue: &apos;Dockerfile&apos;, description: &apos;Dockerfile 경로&apos;)
+    string(name: &apos;BUILD_CTX&apos;,     defaultValue: &apos;.&apos;, description: &apos;docker build context&apos;)
+    string(name: &apos;IMAGE_NAME&apos;,    defaultValue: &apos;star&apos;, description: &apos;도커 이미지명&apos;)
+    string(name: &apos;SERVICE_NAME&apos;,  defaultValue: &apos;star&apos;, description: &apos;compose 서비스 키&apos;)
+    string(name: &apos;CONTAINER_NAME&apos;,defaultValue: &apos;star-app&apos;, description: &apos;컨테이너 이름&apos;)
+    string(name: &apos;COMPOSE_FILE&apos;,  defaultValue: &apos;/home/binary/binaryworld/infra/docker-compose.yml&apos;, description: &apos;서버 공용 compose 경로&apos;)
+    string(name: &apos;NEXT_PUBLIC_KAKAO_JS_KEY&apos;, defaultValue: &apos;ea07c2afa5b5a0a07737bab48ab8e3e8&apos;, description: &apos;카카오 JS 키 (빌드 인자)&apos;)
+    string(name: &apos;NEXT_PUBLIC_ADSENSE_CLIENT&apos;, defaultValue: &apos;ca-pub-6890085609044109&apos;, description: &apos;애드센스 클라이언트 ID (빌드 인자)&apos;)
+  }
+
+  environment { TZ = &apos;Asia/Seoul&apos; }
+
+  stages {
+    stage(&apos;Checkout&apos;) {
+      steps {
+        script {
+          if (params.CREDENTIALS?.trim()) {
+            checkout([$class: &apos;GitSCM&apos;,
+              branches: [[name: &quot;*/${params.BRANCH}&quot;]],
+              userRemoteConfigs: [[url: params.REPO_URL, credentialsId: params.CREDENTIALS]]
+            ])
+          } else {
+            checkout([$class: &apos;GitSCM&apos;,
+              branches: [[name: &quot;*/${params.BRANCH}&quot;]],
+              userRemoteConfigs: [[url: params.REPO_URL]]
+            ])
+          }
+        }
+      }
+    }
+
+    stage(&apos;Docker Build &amp; Tag&apos;) {
+      steps {
+        sh &quot;&quot;&quot;
+          GIT_SHA=\$(git rev-parse --short HEAD)
+          docker build --no-cache -f ${params.DOCKERFILE} \
+            --build-arg NEXT_PUBLIC_KAKAO_JS_KEY=${params.NEXT_PUBLIC_KAKAO_JS_KEY} \
+            --build-arg NEXT_PUBLIC_ADSENSE_CLIENT=${params.NEXT_PUBLIC_ADSENSE_CLIENT} \
+            -t ${params.IMAGE_NAME}:\$GIT_SHA \
+            -t ${params.IMAGE_NAME}:latest \
+            ${params.BUILD_CTX}
+          docker images | grep ^${params.IMAGE_NAME}\\s | head -n 5 || true
+        &quot;&quot;&quot;
+      }
+    }
+
+    stage(&apos;Deploy (Compose up)&apos;) {
+      steps {
+        sh &quot;&quot;&quot;
+          docker compose -f ${params.COMPOSE_FILE} up -d --build --force-recreate ${params.SERVICE_NAME}
+          docker ps --format &apos;table {{.Names}}\\t{{.Image}}\\t{{.Status}}&apos; | (head -n 1; grep ${params.CONTAINER_NAME} || true)
+        &quot;&quot;&quot;
+      }
+    }
+
+    stage(&apos;Cleanup dangling images&apos;) {
+      steps { sh &apos;docker image prune -f || true&apos; }
+    }
+  }
+
+  post {
+    success { echo &quot;✅ 배포 성공: ${params.SERVICE_NAME}&quot; }
+    failure { echo &quot;❌ 배포 실패&quot; }
+  }
+}
+</script>
+    <sandbox>true</sandbox>
+  </definition>
+  <triggers/>
+  <disabled>false</disabled>
+</flow-definition>

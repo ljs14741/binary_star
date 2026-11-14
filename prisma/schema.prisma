@@ -1,0 +1,137 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url               = env("DATABASE_URL")
+  shadowDatabaseUrl = env("SHADOW_DATABASE_URL") // prisma migrate dev 용 (star_shadow)
+}
+
+// 주제 방. 처음 6개는 운영자가 넣고 닫히지 않음
+model room {
+  id             Int         @id @default(autoincrement())
+  slug           String      @unique(map: "slug") @db.VarChar(64)
+  featured_until DateTime?   @db.Timestamp(0) // 이번 달 주제 마감 시각(KST 기준 입력)
+  status         String      @default("open") @db.VarChar(16) // open | closed
+  sort_order     Int         @default(0)
+  created_at     DateTime    @default(now()) @db.Timestamp(0)
+  i18n           room_i18n[]
+  stories        story[]
+
+  @@index([status, sort_order])
+}
+
+// 방 이름·설명 4개 언어
+model room_i18n {
+  id          Int    @id @default(autoincrement())
+  room_id     Int
+  lang        String @db.VarChar(8)
+  title       String @db.VarChar(100)
+  description String @db.VarChar(300)
+  room        room   @relation(fields: [room_id], references: [id], onDelete: Cascade)
+
+  @@unique([room_id, lang])
+}
+
+// 이야기
+model story {
+  id               Int                 @id @default(autoincrement())
+  room_id          Int
+  body             String              @db.Text
+  nickname         String?             @db.VarChar(20) // 선택 별명 (증명 아님)
+  lang             String              @db.VarChar(8)
+  age_group        String?             @db.VarChar(8) // 10s ~ 60s
+  country          String?             @db.VarChar(2)
+  city             String?             @db.VarChar(80)
+  status           String              @default("pending") @db.VarChar(16) // pending | public | private | withdrawn(본인이 내림) | hidden | removed
+  moderation_note  String?             @db.VarChar(64) // 비공개·숨김 사유
+  empathy_count    Int                 @default(0)
+  report_count     Int                 @default(0)
+  owner_token_hash String              @db.VarChar(64)
+  voter_key        String              @db.VarChar(64)
+  is_seed          Boolean             @default(false)
+  created_at       DateTime            @default(now()) @db.Timestamp(0)
+  published_at     DateTime?           @db.Timestamp(0)
+  edited_at        DateTime?           @db.Timestamp(0) // 10분 안 수정했을 때
+  room             room                @relation(fields: [room_id], references: [id], onDelete: Cascade)
+  empathies        empathy[]
+  translations     story_translation[]
+  reports          report[]
+
+  @@index([room_id, status, empathy_count])
+  @@index([status, published_at])
+  @@index([owner_token_hash])
+  @@index([voter_key, created_at])
+}
+
+// 공감. 이야기당 1인 1회
+model empathy {
+  id         Int      @id @default(autoincrement())
+  story_id   Int
+  voter_key  String   @db.VarChar(64)
+  country    String?  @db.VarChar(2)
+  city       String?  @db.VarChar(80)
+  lat        Float? // 도시 중심 좌표(소수 1자리). 지구본 불빛용, IP 아님
+  lng        Float?
+  ip_hash    String?  @db.VarChar(64) // IP/24 해시. 쿠키 바꿔 가며 누르는 거짓 공감 제한용 (원문 아님)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  story      story    @relation(fields: [story_id], references: [id], onDelete: Cascade)
+
+  @@unique([story_id, voter_key])
+  @@index([story_id, created_at])
+  @@index([voter_key, created_at])
+  @@index([story_id, ip_hash, created_at])
+}
+
+// 이야기 번역본 캐시
+model story_translation {
+  id         Int      @id @default(autoincrement())
+  story_id   Int
+  lang       String   @db.VarChar(8)
+  body       String   @db.Text
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  story      story    @relation(fields: [story_id], references: [id], onDelete: Cascade)
+
+  @@unique([story_id, lang])
+}
+
+// 새 주제 제안. 공감 100개면 방으로 승격
+model room_proposal {
+  id            Int                @id @default(autoincrement())
+  title         String             @db.VarChar(100)
+  lang          String             @db.VarChar(8)
+  empathy_count Int                @default(0)
+  status        String             @default("open") @db.VarChar(16) // open | promoted | rejected | hidden
+  auto_approve  Boolean            @default(true) // false 면 100개 돼도 운영자 승인 전까지 대기
+  room_id       Int?
+  voter_key     String             @db.VarChar(64)
+  country       String?            @db.VarChar(2)
+  created_at    DateTime           @default(now()) @db.Timestamp(0)
+  empathies     proposal_empathy[]
+
+  @@index([status, empathy_count])
+  @@index([voter_key, created_at])
+}
+
+model proposal_empathy {
+  id          Int           @id @default(autoincrement())
+  proposal_id Int
+  voter_key   String        @db.VarChar(64)
+  created_at  DateTime      @default(now()) @db.Timestamp(0)
+  proposal    room_proposal @relation(fields: [proposal_id], references: [id], onDelete: Cascade)
+
+  @@unique([proposal_id, voter_key])
+}
+
+// 신고. 서로 다른 voter 3번이면 자동 숨김
+model report {
+  id         Int      @id @default(autoincrement())
+  story_id   Int
+  voter_key  String   @db.VarChar(64)
+  reason     String   @db.VarChar(32)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  story      story    @relation(fields: [story_id], references: [id], onDelete: Cascade)
+
+  @@unique([story_id, voter_key])
+}

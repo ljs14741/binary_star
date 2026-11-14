@@ -1,0 +1,10 @@
+node_modules
+.next
+.tmp
+.git
+.env*
+backups
+docs
+tests
+*.tsbuildinfo
+data/seed-owner-token.txt

@@ -1,0 +1,129 @@
+@import "tailwindcss";
+
+@theme {
+    --color-night: #0e1430;
+    --color-night-deep: #070b1d;
+    --color-star: #ffd86b;
+    --color-star-soft: #ffe9a6;
+    --color-ink: #f6f4ee;
+    --color-muted: #c6cadb;
+    --color-dim: #9298b5;
+    --color-card: rgba(255, 255, 255, 0.075);
+    --color-card-strong: rgba(255, 255, 255, 0.12);
+    --color-line: rgba(255, 255, 255, 0.14);
+    --color-rose: #ff9bb3;
+    --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "PingFang TC", "Noto Sans TC", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-story: "Noto Serif KR", "Apple SD Gothic Neo", "Pretendard Variable", Pretendard, "Hiragino Mincho ProN", "Noto Serif JP", "Noto Serif TC", Georgia, serif;
+    --shadow-glow: 0 0 40px rgba(255, 216, 107, 0.18);
+}
+
+html {
+    color-scheme: dark;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    background: radial-gradient(1200px 700px at 50% -10%, #1a2352 0%, #0e1430 45%, #070b1d 100%) fixed;
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    min-height: 100dvh;
+    overflow-x: hidden;
+    letter-spacing: -0.01em;
+}
+
+html[lang="ja"] body { font-family: "Noto Sans JP", "Hiragino Sans", "Hiragino Kaku Gothic ProN", Meiryo, var(--font-sans); }
+html[lang^="zh"] body { font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", var(--font-sans); }
+html[lang="ko"] body, html[lang="en"] body { font-family: "Pretendard Variable", Pretendard, "Apple SD Gothic Neo", "Noto Sans KR", var(--font-sans); }
+
+/* 이야기 본문: 읽기 좋게 */
+.story-body {
+    font-family: inherit;
+    font-size: 1.125rem;
+    line-height: 1.85;
+    white-space: pre-wrap;
+    word-break: keep-all;
+    overflow-wrap: anywhere;
+}
+
+.clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* 릴스식 넘기기 */
+.snap-feed {
+    scroll-snap-type: y proximity;
+    overscroll-behavior-y: contain;
+    scrollbar-width: none;
+}
+.snap-feed::-webkit-scrollbar {
+    display: none;
+}
+.snap-item {
+    scroll-snap-align: start;
+}
+
+.glass {
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.06));
+    border: 1px solid var(--color-line);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.btn-star {
+    background: linear-gradient(135deg, #ffe39a, #ffd86b 60%, #f2bf3c);
+    color: #2a1f05;
+    box-shadow: 0 6px 24px rgba(255, 216, 107, 0.25);
+}
+.btn-star:active {
+    transform: translateY(1px);
+}
+
+@keyframes twinkle {
+    0%, 100% { opacity: 0.35; }
+    50% { opacity: 1; }
+}
+
+.fade-in {
+    animation: fadeIn 0.35s ease-out both;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: none; }
+}
+
+/* 양옆 하늘 위 가운데 폰 폭 */
+.phone {
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+select, textarea, input {
+    font: inherit;
+}
+textarea:focus, input:focus, button:focus-visible, a:focus-visible, select:focus {
+    outline: 2px solid rgba(255, 216, 107, 0.6);
+    outline-offset: 2px;
+}
+
+/* 밤의 언덕: 첫 화면 전체 (헤더 아래), 폰 폭 밖까지 꽉 채움 */
+.hill-wrap {
+    position: relative;
+    left: 50%;
+    width: 100vw;
+    transform: translateX(-50%);
+    height: calc(100dvh - 3.5rem);
+    min-height: 480px;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+}
+.hill-canvas {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
