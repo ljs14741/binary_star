@@ -252,10 +252,10 @@ export const ja: { [K in keyof typeof ko]: string } = {
     hill_empty_room: "この星座はまだ空っぽ。\n最初の話が最初の星になります",
     hill_empty_zodiac: "まだテーマのない星座",
     hill_sound_hint: "画面をタップすると音が出ます",
-    hill_online: "いま{n}人が接続中",
+    hill_online: "いま{n}/{cap}人",
     hill_wave: "手をふる",
     hill_sound_off: "音を消す",
     hill_sound_on: "音を出す",
     hill_empty: "この星座にはまだテーマがありません。\n新しいテーマを提案すると星が浮かびます",
-    hill_count: "星座12 · テーマ{n}つ",
+    hill_count: "テーマ{n}つ",
 };

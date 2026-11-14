@@ -252,10 +252,10 @@ export const en: { [K in keyof typeof ko]: string } = {
     hill_empty_room: "This constellation is still empty.\nThe first story becomes its first star",
     hill_empty_zodiac: "No room here yet",
     hill_sound_hint: "Tap the screen to turn on sound",
-    hill_online: "{n} here now",
+    hill_online: "{n}/{cap} here now",
     hill_wave: "Wave",
     hill_sound_off: "Sound off",
     hill_sound_on: "Sound on",
     hill_empty: "This constellation has no room yet.\nPropose a theme and stars will rise here",
-    hill_count: "12 constellations · {n} rooms",
+    hill_count: "{n} rooms",
 };

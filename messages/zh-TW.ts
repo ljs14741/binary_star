@@ -252,10 +252,10 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     hill_empty_room: "這個星座還是空的。\n第一則故事會成為第一顆星",
     hill_empty_zodiac: "還沒有主題的星座",
     hill_sound_hint: "點一下畫面就會開啟聲音",
-    hill_online: "目前 {n} 人在線",
+    hill_online: "目前 {n}/{cap} 人",
     hill_wave: "揮手",
     hill_sound_off: "關閉聲音",
     hill_sound_on: "開啟聲音",
     hill_empty: "這個星座還沒有主題。\n提出新主題，星星就會在這裡升起",
-    hill_count: "12 個星座 · {n} 個主題",
+    hill_count: "{n} 個主題",
 };

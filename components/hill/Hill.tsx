@@ -6,7 +6,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ChevronDown, Hand, PenLine, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
 import type { SkyData } from "@/lib/hill";
 import type { StoryView } from "@/lib/stories";
-import type { StarEvent } from "@/lib/realtime/protocol";
+import { HILL_CAP, type StarEvent } from "@/lib/realtime/protocol";
 import { useLang, useT } from "@/components/I18nProvider";
 import BottomSheet from "@/components/BottomSheet";
 import StoryCard from "@/components/StoryCard";
@@ -285,13 +285,12 @@ function Hill3D({ initialTotal }: Props) {
                         </button>
                     ))}
                 </div>
-                <p className="flex items-center gap-1.5 text-[11px] text-muted">
-                    <span className="text-dim">{t("hill_count", { n: rooms.length })} · {index + 1}/{ZODIAC.length}</span>
-                </p>
-                <p className="flex items-center gap-1.5 text-[11px] text-muted">
+                {/* 한 줄: 주제 수 · 몇 번째 별자리 · 접속 인원/정원 */}
+                <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-[11px] text-muted">
+                    <span className="text-dim">{t("hill_count", { n: rooms.length })} · {index + 1}/{ZODIAC.length} ·</span>
                     <span className={`inline-block h-1.5 w-1.5 rounded-full ${status === "open" ? "bg-star" : "bg-dim"}`} />
                     <Users size={11} className="text-star-soft" />
-                    <span className="text-ink">{t("hill_online", { n: formatNumber(Math.max(1, shownTotal), lang) })}</span>
+                    <span className="text-ink">{t("hill_online", { n: formatNumber(Math.max(1, shownTotal), lang), cap: formatNumber(HILL_CAP, lang) })}</span>
                     {shownTotal <= 1 && <span className="text-dim">· {t("hill_alone")}</span>}
                 </p>
                 {introDone && <p className="text-[11px] text-dim">{t("hill_drag_hint")}</p>}

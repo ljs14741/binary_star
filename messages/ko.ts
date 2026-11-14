@@ -251,10 +251,10 @@ export const ko = {
     hill_empty_room: "이 별자리는 아직 비어 있어요.\n첫 이야기가 첫 별이 돼요",
     hill_empty_zodiac: "아직 주제가 없는 별자리",
     hill_sound_hint: "화면을 누르면 소리가 켜져요",
-    hill_online: "지금 {n}명 접속 중",
+    hill_online: "지금 {n}/{cap}명",
     hill_wave: "손 흔들기",
     hill_sound_off: "소리 끄기",
     hill_sound_on: "소리 켜기",
     hill_empty: "이 별자리엔 아직 주제가 없어요.\n새 주제를 제안하면 여기에 별이 떠요",
-    hill_count: "별자리 12개 · 주제 {n}개",
+    hill_count: "주제 {n}개",
 };
