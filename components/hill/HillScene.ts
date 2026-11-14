@@ -180,6 +180,7 @@ export class HillScene {
     private lastKeySend = 0;
     private isMobile: boolean;
     private selScale: number;
+    private portrait = false; // 세로 화면(폰): 3D 안 이름표를 숨김 (머리글에 같은 글자가 있음)
 
     constructor(private canvas: HTMLCanvasElement, private opts: SceneOpts) {
         const isMobile = /Mobi|Android/i.test(navigator.userAgent);
@@ -425,6 +426,7 @@ export class HillScene {
             this.constellations.push({ index: zi, shape, slug: room?.slug ?? null, title: room?.title ?? null, cell, starIds: ids, lines, linePairs, label, labelAspect: zl.aspect, sub, subAspect: sl.aspect, subLines: subText.split("\n").length, scale: sc, scaleTarget: sc });
         });
         this.starGeo.setDrawRange(0, this.starList.length);
+        this.applyLabelVisibility();
         this.applySelection();
         for (const c of this.constellations) this.placeConstellation(c);
         this.flagStarAttrs();
@@ -1135,9 +1137,16 @@ export class HillScene {
         const h = this.canvas.clientHeight || window.innerHeight;
         this.renderer.setSize(w, h, false);
         this.camera.aspect = w / h;
-        this.camera.fov = w < h ? 76 : 58;
+        this.portrait = w < h;
+        this.camera.fov = this.portrait ? 76 : 58;
         this.camera.updateProjectionMatrix();
+        this.applyLabelVisibility();
     };
+
+    // 세로 화면에선 별자리 이름표(이름·주제)를 안 그림. 그 자리에 문장 카드가 옴
+    private applyLabelVisibility() {
+        for (const c of this.constellations) c.label.visible = c.sub.visible = !this.portrait;
+    }
     private onVis = () => {
         this.visible = document.visibilityState !== "hidden";
         if (this.visible) this.loop();

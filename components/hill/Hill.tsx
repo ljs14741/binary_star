@@ -315,8 +315,8 @@ function Hill3D({ initialTotal }: Props) {
                 </button>
             </div>
 
-            {/* 지금 밝아진 별의 첫 문장 (빈 별자리면 안내). 폰에선 요정들을 안 가리게 섬 아래(바다) 자리, 넓은 화면에선 가운데 */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-[6.75rem] flex justify-center px-5 sm:bottom-auto sm:top-[60%]">
+            {/* 지금 밝아진 별의 첫 문장 (빈 별자리면 안내). 세로(폰)에선 수평선 바로 위(이름표 대신) 라 요정을 안 가림, 가로(PC)는 가운데 */}
+            <div className="pointer-events-none absolute inset-x-0 flex justify-center px-5 portrait:top-[var(--hill-horizon,66%)] portrait:-translate-y-[calc(100%+8px)] landscape:top-[60%]">
                 <AnimatePresence mode="wait">
                     {slot && !room && !highlight && (
                         <motion.div key={`nozodiac-${index}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.45 }} className="glass pointer-events-auto max-w-[400px] rounded-2xl px-4 py-3 text-center">
