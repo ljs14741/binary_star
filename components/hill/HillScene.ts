@@ -41,6 +41,7 @@ const IDLE_BEFORE_AUTO = 20; // 마지막 조작 뒤 이만큼 지나야 다음 
 const WAVE_SEC = 2.2;
 const MOON_AZ = -15, MOON_ELEV = 33; // 달 방위·고도(도). 바다 달빛 길(scenery)도 같은 방위
 const PORTRAIT_CAM_FWD = 3.2; // 세로 화면에서 카메라가 섬 쪽으로 다가가는 거리
+const TAG_H = 0.28, TAG_Y = 1.0; // 별명표 높이·자리(요정 머리 위)
 const ORBIT_R = SKY_ORIGIN.z - FIRE_POS.z; // 카메라가 모닥불 둘레를 도는 반지름 (정면일 때 SKY_ORIGIN 자리)
 const DEG = Math.PI / 180;
 const CAM_Y = SKY_ORIGIN.y;
@@ -68,6 +69,8 @@ type Person = {
     hearts: { sprite: THREE.Sprite; born: number }[];
     name: string | null;
     tag: THREE.Sprite | null; // 머리 위 별명표
+    tagAspect: number;
+    tagLift: number; // 다른 이름표와 안 겹치게 위로 올린 높이(월드)
 };
 
 type Constellation = {
@@ -862,7 +865,7 @@ export class HillScene {
             group.add(glow);
             this.scene.add(group);
             const now = this.clock.getElapsedTime();
-            p = { id: m.id, group, body, glow, pal, target: new THREE.Vector2(m.x, m.z), pos: new THREE.Vector2(m.x, m.z), pose: m.p, bob: Math.random() * 6.28, nextBlink: now + 2 + Math.random() * 4, blinkUntil: 0, lookUntil: 0, happyUntil: 0, walkUntil: 0, waveUntil: 0, hearts: [], name: null, tag: null };
+            p = { id: m.id, group, body, glow, pal, target: new THREE.Vector2(m.x, m.z), pos: new THREE.Vector2(m.x, m.z), pose: m.p, bob: Math.random() * 6.28, nextBlink: now + 2 + Math.random() * 4, blinkUntil: 0, lookUntil: 0, happyUntil: 0, walkUntil: 0, waveUntil: 0, hearts: [], name: null, tag: null, tagAspect: 1, tagLift: 0 };
             this.people.set(m.id, p);
             this.applyLook(p);
             const name = m.n ?? this.pendingNames.get(m.id) ?? null;
@@ -886,6 +889,40 @@ export class HillScene {
         return t;
     }
 
+    // 별명표끼리 화면에서 겹치면 뒤쪽(먼) 것을 위로 비켜 올림. 가까운 사람 이름표가 제자리, 부드럽게 움직임
+    private layoutTags(dt: number) {
+        const H = this.canvas.clientHeight || window.innerHeight;
+        const tanHalf = Math.tan((this.camera.fov * DEG) / 2);
+        const v = new THREE.Vector3();
+        const items: { p: Person; x: number; y: number; w: number; h: number; ppw: number; dist: number }[] = [];
+        for (const p of this.people.values()) {
+            if (!p.tag) continue;
+            v.set(p.group.position.x, p.group.position.y + TAG_Y, p.group.position.z);
+            const dist = v.distanceTo(this.camera.position);
+            v.project(this.camera);
+            if (v.z > 1) continue;
+            const ppw = H / (2 * dist * tanHalf); // 이 깊이에서 월드 1 이 몇 px
+            const h = TAG_H * ppw, w = h * p.tagAspect * 0.92 + 4; // 글자 둘레 여백은 조금 빼고, 옆 이름표와 틈 4px
+            items.push({ p, x: ((v.x + 1) / 2) * (this.canvas.clientWidth || window.innerWidth), y: ((1 - v.y) / 2) * H, w, h, ppw, dist });
+        }
+        items.sort((a, b) => a.dist - b.dist);
+        const placed: { l: number; r: number; t: number; b: number }[] = [];
+        for (const it of items) {
+            const l = it.x - it.w / 2, r = it.x + it.w / 2;
+            let bottom = it.y; // 이름표 아래끝(화면 y, 아래로 갈수록 큼)
+            for (let k = 0; k < 12; k++) {
+                const hit = placed.find((q) => l < q.r && r > q.l && bottom > q.t && bottom - it.h < q.b);
+                if (!hit) break;
+                bottom = hit.t - 1;
+            }
+            placed.push({ l, r, t: bottom - it.h, b: bottom });
+            const want = (it.y - bottom) / it.ppw;
+            it.p.tagLift += (want - it.p.tagLift) * Math.min(1, dt * 8);
+            if (Math.abs(want - it.p.tagLift) < 0.002) it.p.tagLift = want;
+            it.p.tag!.position.y = TAG_Y + it.p.tagLift;
+        }
+    }
+
     // 머리 위 별명표. 내 것은 별빛 색, 다른 사람은 흰색 조금 흐리게
     setName(id: number, name: string | null) {
         const p = this.people.get(id);
@@ -904,10 +941,11 @@ export class HillScene {
         const me = id === this.meId;
         const t = textTexture(name, { size: 40, color: me ? "#ffe9a8" : "#ffffff", font: me ? "700" : "500", pad: 20 });
         const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: t.tex, transparent: true, depthWrite: false, depthTest: false, opacity: me ? 1 : 0.75 }));
-        const h = 0.28;
+        const h = TAG_H;
         tag.scale.set(h * t.aspect, h, 1);
+        p.tagAspect = t.aspect;
         tag.center.set(0.5, 0);
-        tag.position.y = 1.0;
+        tag.position.y = TAG_Y + p.tagLift;
         tag.renderOrder = 5;
         p.group.add(tag);
         p.tag = tag;
@@ -1331,6 +1369,7 @@ export class HillScene {
                 return true;
             });
         }
+        this.layoutTags(dt);
 
         // 떠오르는 별
         for (const [id, start] of this.pendingBorn) {

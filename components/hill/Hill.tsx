@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown, Hand, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Hand, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
 import type { SkyData } from "@/lib/hill";
 import type { StoryView } from "@/lib/stories";
 import { HILL_CAP, type StarEvent } from "@/lib/realtime/protocol";
@@ -90,6 +90,7 @@ function Hill3D({ initialTotal }: Props) {
     const sitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [sky, setSky] = useState<SkyData | null>(null);
     const [shareOpen, setShareOpen] = useState(false);
+    const [helpOpen, setHelpOpen] = useState(false);
     // 헤더·글쓰기에서 별명을 바꾸면 언덕 이름표도 바로 바뀜
     useEffect(() => {
         const send = () => bridge.send({ t: "name", n: getNickname() || null });
@@ -297,13 +298,11 @@ function Hill3D({ initialTotal }: Props) {
                         </button>
                     ))}
                 </div>
-                {/* 한 줄: 주제 수 · 몇 번째 별자리 · 접속 인원/정원 */}
+                {/* 한 줄: 지금 접속 인원/정원 */}
                 <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-[11px] text-muted">
-                    <span className="text-dim">{t("hill_count", { n: rooms.length })} · {index + 1}/{ZODIAC.length} ·</span>
                     <span className={`inline-block h-1.5 w-1.5 rounded-full ${status === "open" ? "bg-star" : "bg-dim"}`} />
                     <Users size={11} className="text-star-soft" />
                     <span className="text-ink">{t("hill_online", { n: formatNumber(Math.max(1, shownTotal), lang), cap: formatNumber(HILL_CAP, lang) })}</span>
-                    {shownTotal <= 1 && <span className="text-dim">· {t("hill_alone")}</span>}
                 </p>
                 {introDone && <p className="text-[11px] text-dim">{t("hill_drag_hint")}</p>}
                 <AnimatePresence>
@@ -317,10 +316,13 @@ function Hill3D({ initialTotal }: Props) {
 
             {/* 오른쪽 위: 소리 */}
             <div className="pointer-events-none absolute right-3 top-[7.5rem] flex flex-col items-end gap-1">
-                <button onClick={toggleSound} aria-label={soundOn ? t("hill_sound_off") : t("hill_sound_on")} aria-pressed={soundOn} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
-                    {soundOn ? <Volume2 size={16} className={soundArmed ? "text-star-soft" : ""} /> : <VolumeX size={16} />}
-                </button>
-                {soundOn && !soundArmed && intro === null && <p className="rounded-full bg-night/60 px-2 py-0.5 text-[10px] text-dim">{t("hill_sound_hint")}</p>}
+                <div className="relative">
+                    <button onClick={toggleSound} aria-label={soundOn ? t("hill_sound_off") : t("hill_sound_on")} aria-pressed={soundOn} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
+                        {soundOn ? <Volume2 size={16} className={soundArmed ? "text-star-soft" : ""} /> : <VolumeX size={16} />}
+                    </button>
+                    {/* 버튼 왼쪽에 띄움: 첫 터치에 사라질 때 아래 버튼들이 밀려 올라가 터치가 빗나가지 않게 */}
+                    {soundOn && !soundArmed && intro === null && <p className="absolute right-full top-1/2 mr-1.5 -translate-y-1/2 whitespace-nowrap rounded-full bg-night/60 px-2 py-0.5 text-[10px] text-dim">{t("hill_sound_hint")}</p>}
+                </div>
                 <button onClick={() => sceneRef.current?.waveMe()} aria-label={t("hill_wave")} title={t("hill_wave")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95" disabled={status !== "open"}>
                     <Hand size={16} />
                 </button>
@@ -328,7 +330,24 @@ function Hill3D({ initialTotal }: Props) {
                 <button onClick={() => setShareOpen(true)} aria-label={t("hill_share")} title={t("hill_share")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
                     <Share2 size={16} />
                 </button>
+                {/* 사용법: 언제든 다시 볼 수 있게 */}
+                <button onClick={() => setHelpOpen(true)} aria-label={t("help_title")} title={t("help_title")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
+                    <CircleHelp size={16} />
+                </button>
             </div>
+            <BottomSheet open={helpOpen} onClose={() => setHelpOpen(false)} title={t("help_title")}>
+                <ul className="space-y-2.5 text-[14px] leading-relaxed text-ink/90">
+                    {(["help_1", "help_2", "help_3", "help_4", "help_5", "help_6"] as const).map((k) => (
+                        <li key={k} className="flex gap-2">
+                            <Sparkles size={14} className="mt-1 shrink-0 text-star" />
+                            <span>{t(k)}</span>
+                        </li>
+                    ))}
+                </ul>
+                <button onClick={() => setHelpOpen(false)} className="btn-star mt-5 h-11 w-full rounded-full text-sm font-semibold">
+                    {t("help_ok")}
+                </button>
+            </BottomSheet>
             <ShareSheet
                 open={shareOpen}
                 onClose={() => setShareOpen(false)}
