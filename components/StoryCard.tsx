@@ -125,7 +125,9 @@ export default function StoryCard({ story: initial, sharedFirst, onNext, onHidde
                 <div className="mb-2 flex items-center gap-1.5 text-[11px] text-muted">
                     <Languages size={12} />
                     {translation?.pending || !translation ? (
-                        <span>{t("translation_pending")}</span>
+                        <span>
+                            {flagEmoji(story.country)} {t("written_in", { lang: fromName })}
+                        </span>
                     ) : (
                         <>
                             <span>
@@ -155,7 +157,9 @@ export default function StoryCard({ story: initial, sharedFirst, onNext, onHidde
                 <>
                     {/* 펼쳤을 때 너무 길면 본문 안에서 스크롤 → 공감 버튼은 항상 보임 */}
                     <div className={expanded && !compact && !ownerView ? "max-h-[50dvh] overflow-y-auto pr-1" : ""}>
-                        <p className={`story-body ${!expanded && long ? "clamp-3" : ""}`}>{body}</p>
+                        <p lang={usingTranslation ? lang : story.lang} className={`story-body ${!expanded && long ? "clamp-3" : ""}`}>
+                            {body}
+                        </p>
                     </div>
                     {long && !expanded && (
                         <button onClick={() => setExpanded(true)} className="mt-1 flex items-center gap-0.5 text-sm text-star-soft">

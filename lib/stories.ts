@@ -134,13 +134,13 @@ export async function getFeed(p: FeedParams): Promise<{ stories: StoryView[]; ha
         id: { notIn: [...exclude, ...seen] },
         ...extra,
     });
-    // 번역이 안 되면(키 없음) 읽는 사람 언어 글만. 되면 다른 언어 글을 6개 중 1개꼴로 섞음
-    const translate = aiEnabled();
-    const langFilter = translate ? {} : { lang: p.lang };
+    // 읽는 사람 언어 글 위주로, 다른 언어 글은 6개 중 1개꼴로 섞음 (내 언어 글이 바닥나면 다른 언어 글로 채움).
+    // 번역 키가 없으면 원문 그대로 보여 주고 브라우저 번역에 맡김. 지구 반대편에서도 공감이 오게 하려는 것
+    const own = { lang: p.lang };
     const [popular, fresh, foreign] = await Promise.all([
-        prisma.story.findMany({ where: base(langFilter), orderBy: [{ empathy_count: "desc" }, { published_at: "desc" }], take: 30 }),
-        prisma.story.findMany({ where: base(langFilter), orderBy: { published_at: "desc" }, take: 15 }),
-        translate ? prisma.story.findMany({ where: base({ lang: { not: p.lang } }), orderBy: [{ empathy_count: "desc" }], take: 10 }) : Promise.resolve([] as StoryRow[]),
+        prisma.story.findMany({ where: base(own), orderBy: [{ empathy_count: "desc" }, { published_at: "desc" }], take: 30 }),
+        prisma.story.findMany({ where: base(own), orderBy: { published_at: "desc" }, take: 15 }),
+        prisma.story.findMany({ where: base({ lang: { not: p.lang } }), orderBy: [{ empathy_count: "desc" }, { published_at: "desc" }], take: 20 }),
     ]);
 
     const used = new Set<number>(exclude);
@@ -161,7 +161,7 @@ export async function getFeed(p: FeedParams): Promise<{ stories: StoryView[]; ha
     // 새 것만으로 모자라면 예전에 본 것도 다시 보여 줌
     if (out.length < limit && seen.size > 0) {
         const again = await prisma.story.findMany({
-            where: { status: "public", ...(room ? { room_id: room.id } : {}), ...langFilter, id: { in: [...seen].filter((id) => !used.has(id)) } },
+            where: { status: "public", ...(room ? { room_id: room.id } : {}), id: { in: [...seen].filter((id) => !used.has(id)) } },
             orderBy: [{ empathy_count: "desc" }],
             take: limit - out.length,
         });
@@ -170,7 +170,7 @@ export async function getFeed(p: FeedParams): Promise<{ stories: StoryView[]; ha
             out.push(s);
         }
     }
-    const remaining = await prisma.story.count({ where: { status: "public", ...(room ? { room_id: room.id } : {}), ...langFilter, id: { notIn: [...used] } } });
+    const remaining = await prisma.story.count({ where: { status: "public", ...(room ? { room_id: room.id } : {}), id: { notIn: [...used] } } });
     const stories = await toStoryViews(out, p.lang, p.voterKey, p.ownerTokenHash);
     return { stories, hasMore: remaining > 0 };
 }

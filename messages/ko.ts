@@ -49,6 +49,7 @@ export const ko = {
     rising: "오르는 중 +{n}",
     translated_from: "{lang}에서 번역",
     translation_pending: "번역 준비 중 · 원문으로 보여드려요",
+    written_in: "{lang}로 쓴 이야기",
     view_original: "원문 보기",
     view_translation: "번역 보기",
     lang_name_ko: "한국어",

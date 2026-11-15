@@ -50,6 +50,7 @@ export const ja: { [K in keyof typeof ko]: string } = {
     rising: "急上昇 +{n}",
     translated_from: "{lang}から翻訳",
     translation_pending: "翻訳準備中・原文を表示しています",
+    written_in: "{lang}で書かれたお話",
     view_original: "原文を見る",
     view_translation: "翻訳を見る",
     lang_name_ko: "韓国語",

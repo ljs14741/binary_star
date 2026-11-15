@@ -50,6 +50,7 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     rising: "上升中 +{n}",
     translated_from: "由{lang}翻譯",
     translation_pending: "翻譯準備中・先顯示原文",
+    written_in: "以{lang}寫成",
     view_original: "看原文",
     view_translation: "看翻譯",
     lang_name_ko: "韓文",

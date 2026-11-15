@@ -112,6 +112,15 @@ describe("피드·1위", () => {
         const statuses = await prisma.story.findMany({ where: { id: { in: f2.stories.map((s) => s.id) } }, select: { status: true } });
         expect(statuses.every((s) => s.status === "public")).toBe(true);
     });
+    it("번역이 없어도 다른 언어 화면에 글이 보이고, 내 언어 글이 먼저", async () => {
+        const ko = await createStory({ roomSlug: SLUG, body: "한국에서 쓴 이야기", lang: "ko", voterKey: vk("fl1"), geo: seoul });
+        const en = await createStory({ roomSlug: SLUG, body: "written in english here", lang: "en", voterKey: vk("fl2"), geo: EMPTY_GEO });
+        if (!ko.ok || !en.ok) throw new Error("create failed");
+        const f = await getFeed({ roomSlug: SLUG, lang: "en", limit: 50 });
+        const ids = f.stories.map((s) => s.id);
+        expect(ids).toContain(ko.story.id);
+        expect(f.stories[0].lang).toBe("en");
+    });
     it("표본 5개 미만 그룹은 1위 대신 '아직 적어요'", async () => {
         const room = await prisma.room.findUnique({ where: { slug: SLUG } });
         const top = await getTop(room!.id, "ko");

@@ -50,6 +50,7 @@ export const en: { [K in keyof typeof ko]: string } = {
     rising: "Rising +{n}",
     translated_from: "Translated from {lang}",
     translation_pending: "Translation coming soon · showing the original",
+    written_in: "Written in {lang}",
     view_original: "Show original",
     view_translation: "Show translation",
     lang_name_ko: "Korean",

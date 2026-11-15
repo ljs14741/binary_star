@@ -5,7 +5,6 @@ import type { Lang } from "./i18n/config";
 import { excerpt } from "./format";
 import { getFeaturedRoom, getFeaturedWinner, listRooms } from "./rooms";
 import { toStoryViews, type StoryView } from "./stories";
-import { aiEnabled } from "./ai";
 
 export const STARS_PER_ROOM = 10;
 
@@ -18,13 +17,11 @@ export async function getSky(lang: Lang): Promise<SkyData> {
     return memo(`hill:sky:${lang}`, 30_000, async () => {
         const rooms = await listRooms(lang);
         const sel = { id: true, empathy_count: true, lang: true, nickname: true, body: true, published_at: true, room: { select: { slug: true } } } as const;
-        // 번역이 안 되면(키 없음) 읽는 사람 언어 글만 (피드와 같은 규칙)
-        const langFilter = aiEnabled() ? {} : { lang };
         const out: SkyRoom[] = [];
         for (const [i, r] of rooms.entries()) {
             const [popular, fresh] = await Promise.all([
-                prisma.story.findMany({ where: { room_id: r.id, status: "public", empathy_count: { gte: 1 }, ...langFilter }, orderBy: [{ empathy_count: "desc" }, { published_at: "desc" }], take: STARS_PER_ROOM, select: sel }),
-                prisma.story.findMany({ where: { room_id: r.id, status: "public", ...langFilter }, orderBy: { published_at: "desc" }, take: STARS_PER_ROOM, select: sel }),
+                prisma.story.findMany({ where: { room_id: r.id, status: "public", empathy_count: { gte: 1 } }, orderBy: [{ empathy_count: "desc" }, { published_at: "desc" }], take: STARS_PER_ROOM, select: sel }),
+                prisma.story.findMany({ where: { room_id: r.id, status: "public" }, orderBy: { published_at: "desc" }, take: STARS_PER_ROOM, select: sel }),
             ]);
             const seen = new Set<number>();
             const stars: SkyStar[] = [];
