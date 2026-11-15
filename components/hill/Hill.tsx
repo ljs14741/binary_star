@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Hand, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Coffee, Hand, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
 import type { SkyData } from "@/lib/hill";
 import type { StoryView } from "@/lib/stories";
 import { HILL_CAP, type StarEvent } from "@/lib/realtime/protocol";
@@ -24,6 +24,7 @@ import { siteName } from "@/lib/site";
 type Props = { initialTotal: number };
 
 const INTRO_KEY = "star_intro_seen";
+const DONATE_URL = "https://qr.kakaopay.com/Ej9JnRsvn"; // game 과 같은 카카오페이 송금 링크
 
 // 소리: 브라우저 자동재생 제한 때문에 첫 터치·클릭·키 입력 뒤에 켬. 끄기 버튼은 브라우저가 기억
 function useSound() {
@@ -91,6 +92,7 @@ function Hill3D({ initialTotal }: Props) {
     const [sky, setSky] = useState<SkyData | null>(null);
     const [shareOpen, setShareOpen] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
+    const [donateOpen, setDonateOpen] = useState(false);
     // 헤더·글쓰기에서 별명을 바꾸면 언덕 이름표도 바로 바뀜
     useEffect(() => {
         const send = () => bridge.send({ t: "name", n: getNickname() || null });
@@ -334,7 +336,25 @@ function Hill3D({ initialTotal }: Props) {
                 <button onClick={() => setHelpOpen(true)} aria-label={t("help_title")} title={t("help_title")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
                     <CircleHelp size={16} />
                 </button>
+                {/* 후원: 카카오페이라 한국어 화면에만 (해외용 링크 생기면 다른 언어도) */}
+                {lang === "ko" && (
+                    <button onClick={() => setDonateOpen(true)} aria-label={t("donate_title")} title={t("donate_title")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
+                        <Coffee size={16} />
+                    </button>
+                )}
             </div>
+            <BottomSheet open={donateOpen} onClose={() => setDonateOpen(false)} title={t("donate_title")}>
+                <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink/90">{t("donate_body")}</p>
+                <a href={DONATE_URL} target="_blank" rel="noopener noreferrer" className="btn-star mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold">
+                    <Coffee size={16} /> {t("donate_pay")}
+                </a>
+                {/* PC 에선 폰으로 찍을 QR */}
+                <div className="mt-4 hidden flex-col items-center gap-1.5 md:flex">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src="/donate-qr.png" alt={t("donate_qr")} width={160} height={160} className="rounded-xl bg-white p-2" />
+                    <p className="text-[11px] text-dim">{t("donate_qr")}</p>
+                </div>
+            </BottomSheet>
             <BottomSheet open={helpOpen} onClose={() => setHelpOpen(false)} title={t("help_title")}>
                 <ul className="space-y-2.5 text-[14px] leading-relaxed text-ink/90">
                     {(["help_1", "help_2", "help_3", "help_4", "help_5", "help_6"] as const).map((k) => (
