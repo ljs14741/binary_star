@@ -6,6 +6,9 @@ const KEY_OWNER = "star_owner";
 const KEY_SEEN = "star_seen";
 const KEY_LAST_TOTAL = "star_last_total";
 const KEY_MINE = "star_mine_ids";
+const KEY_NICK = "star_nickname"; // 원문 문자열 (JSON 아님, 예전 값과 호환)
+const KEY_NICK_V2 = "star_nickname_v2"; // 자동 별명 도입 뒤 한 번 정해졌는지
+export const NICK_EVENT = "star:nickname";
 
 function read<T>(k: string, fallback: T): T {
     try {
@@ -86,4 +89,37 @@ export function langPath(lang: Lang, path = ""): string {
 export function siteOrigin(): string {
     if (typeof window !== "undefined") return window.location.origin;
     return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3100";
+}
+
+// ---------- 별명 ----------
+export function getNickname(): string {
+    try {
+        return localStorage.getItem(KEY_NICK) ?? "";
+    } catch {
+        return "";
+    }
+}
+export function setNickname(v: string) {
+    try {
+        localStorage.setItem(KEY_NICK, v.trim());
+        localStorage.setItem(KEY_NICK_V2, "1");
+        window.dispatchEvent(new Event(NICK_EVENT));
+    } catch {
+        /* 무시 */
+    }
+}
+// 처음이거나(자동 별명 도입 전에 비워 둔 사람 포함) 비어 있으면 하나 정해 줌. 그 뒤 일부러 지운 건 존중
+export function ensureNickname(make: () => string): string {
+    try {
+        const cur = localStorage.getItem(KEY_NICK) ?? "";
+        if (localStorage.getItem(KEY_NICK_V2) || cur) {
+            if (!localStorage.getItem(KEY_NICK_V2)) localStorage.setItem(KEY_NICK_V2, "1");
+            return cur;
+        }
+        const n = make();
+        setNickname(n);
+        return n;
+    } catch {
+        return "";
+    }
 }

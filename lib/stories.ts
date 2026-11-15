@@ -2,14 +2,15 @@ import type { story as StoryRow } from "@prisma/client";
 import { emitStar } from "./realtime/emit";
 import { prisma } from "./prisma";
 import { isLang, type Lang } from "./i18n/config";
-import { moderate, hasBannedWord, hasUrl, maskPii } from "./moderation";
+import { moderate } from "./moderation";
 import { memoClear } from "./cache";
+import { checkNickname } from "./nickname";
 import { aiEnabled, aiModerate } from "./ai";
 import { getCachedTranslations } from "./translate";
 import { hashOwnerToken, newOwnerToken } from "./crypto";
 import type { Geo } from "./geo";
 import { rateLimit } from "./ratelimit";
-import { AGE_GROUPS, DAILY_STORY_LIMIT, EDIT_WINDOW_MS, EMPATHY_PER_IP_PER_MINUTE, EMPATHY_PER_IP_PER_STORY_DAY, EMPATHY_PER_MINUTE, NICKNAME_MAX_LEN, REPORT_HIDE_COUNT, RISING_MIN } from "./site";
+import { AGE_GROUPS, DAILY_STORY_LIMIT, EDIT_WINDOW_MS, EMPATHY_PER_IP_PER_MINUTE, EMPATHY_PER_IP_PER_STORY_DAY, EMPATHY_PER_MINUTE, REPORT_HIDE_COUNT, RISING_MIN } from "./site";
 import { pickI18n } from "./rooms";
 
 export type StoryView = {
@@ -199,12 +200,8 @@ export type CreateResult =
 
 // 별명 정리. 금칙어·링크·개인정보가 들어 있으면 null 대신 오류
 export function cleanNickname(raw: string | null | undefined): { ok: true; value: string | null } | { ok: false } {
-    const full = (raw ?? "").replace(/\s+/g, " ").trim();
-    const v = full.slice(0, NICKNAME_MAX_LEN);
-    if (!v) return { ok: true, value: null };
-    // 전화번호·이메일·아이디 같은 건 별명에 못 넣음 (잘리기 전 원문 기준으로도 검사)
-    if (hasBannedWord(v) || hasUrl(full) || maskPii(full).masked || /[@#<>]/.test(v) || /\d{4,}/.test(full)) return { ok: false };
-    return { ok: true, value: v };
+    // 규칙은 lib/nickname.ts (브라우저에서도 같은 검사로 바로 알려 줌)
+    return checkNickname(raw);
 }
 
 export async function createStory(input: CreateInput): Promise<CreateResult> {

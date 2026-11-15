@@ -6,9 +6,9 @@ import { motion } from "framer-motion";
 import { Link2, Send, Share2, Check, KeyRound, Dices } from "lucide-react";
 import type { StoryView } from "@/lib/stories";
 import { AGE_GROUPS, NICKNAME_MAX_LEN, STORY_MAX_LEN } from "@/lib/site";
-import { randomNickname } from "@/lib/nickname";
+import { checkNickname, randomNickname } from "@/lib/nickname";
 import { useLang, useT } from "./I18nProvider";
-import { addMineId, api, langPath, setOwnerToken, siteOrigin } from "@/lib/client";
+import { addMineId, api, ensureNickname, langPath, setNickname as saveNickname, setOwnerToken, siteOrigin } from "@/lib/client";
 import StoryCard from "./StoryCard";
 import ShareSheet, { storyShareTarget } from "./ShareSheet";
 import CrisisNotice from "./CrisisNotice";
@@ -36,13 +36,12 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
     const [body, setBody] = useState("");
     const [age, setAge] = useState<string | null>(null);
     const [nickname, setNickname] = useState("");
-    // 고친 별명은 바로 기억 (다음 글에도 이어짐)
+    // 고친 별명은 바로 기억 (다음 글에도, 헤더 별명에도 이어짐)
     const changeNickname = (v: string) => {
         setNickname(v);
-        try {
-            localStorage.setItem("star_nickname", v.trim());
-        } catch {}
+        saveNickname(v);
     };
+    const nickBad = !checkNickname(nickname).ok;
     const [linkSaved, setLinkSaved] = useState(false);
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState<string | null>(null);
@@ -54,12 +53,8 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
         let raf = 0;
         try {
             const d = sessionStorage.getItem(`draft:${roomSlug}`);
-            // 별명: 처음이면(저장된 적 없음) 자동으로 하나 정해 줌. 일부러 지운 사람("")은 익명 그대로
-            let n = localStorage.getItem("star_nickname");
-            if (n === null) {
-                n = randomNickname(lang);
-                localStorage.setItem("star_nickname", n);
-            }
+            // 별명: 처음이면 자동으로 하나 정해 줌. 일부러 지운 사람("")은 익명 그대로
+            const n = ensureNickname(() => randomNickname(lang));
             raf = requestAnimationFrame(() => {
                 if (d) setBody(d);
                 if (n) setNickname(n);
@@ -97,9 +92,7 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
         }
         setOwnerToken(r.ownerToken);
         addMineId(r.story.id);
-        try {
-            localStorage.setItem("star_nickname", nickname.trim());
-        } catch {}
+        saveNickname(nickname);
         try {
             sessionStorage.removeItem(`draft:${roomSlug}`);
         } catch {}
@@ -203,7 +196,7 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
                     <Dices size={16} /> {t("nickname_reroll")}
                 </button>
             </div>
-            <p className="mt-1 text-[11px] text-dim">{t("nickname_hint")}</p>
+            <p className={`mt-1 text-[11px] ${nickBad ? "text-rose" : "text-dim"}`}>{nickBad ? t("nickname_err") : t("nickname_hint")}</p>
 
             <p className="mb-2 mt-4 text-sm text-muted">{t("write_age")}</p>
             <div className="flex flex-wrap gap-2">
@@ -221,7 +214,7 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
 
             {err && <p className="mt-4 rounded-xl bg-rose/10 px-3 py-2 text-sm text-rose">{err}</p>}
 
-            <button onClick={submit} disabled={busy} className="btn-star mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full font-semibold disabled:opacity-60">
+            <button onClick={submit} disabled={busy || nickBad} className="btn-star mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full font-semibold disabled:opacity-60">
                 <Send size={16} /> {busy ? t("write_submitting") : t("write_submit")}
             </button>
             <p className="mt-3 text-center text-[11px] text-dim">{t(translate ? "anon_notice" : "anon_notice_local")}</p>

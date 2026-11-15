@@ -58,3 +58,13 @@ describe("자동 별명", () => {
         for (let i = 0; i < 20; i++) expect(randomNickname("ko", Math.random, cur)).not.toBe(cur);
     });
 });
+
+import { checkNickname } from "@/lib/nickname";
+describe("별명 검사", () => {
+    it("이상한 별명은 막고 평범한 별명은 통과", () => {
+        for (const bad of ["시 발", "ㅅㅂ고래", "섹스", "야동왕", "운영자", "관리자임", "admin", "Porn star", "010-1234-5678", "!!!", "1234567", "fuck", "변태곰", "별말씀"])
+            expect(checkNickname(bad), bad).toEqual({ ok: false });
+        for (const good of ["포근한 고양이", "젖은 우산", "Soft Deer", "しずかなクジラ", "安靜的鯨魚", "비 오는 날"]) expect(checkNickname(good).ok, good).toBe(true);
+        expect(checkNickname("  ")).toEqual({ ok: true, value: null });
+    });
+});

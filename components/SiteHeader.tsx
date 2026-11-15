@@ -6,6 +6,7 @@ import { useSyncExternalStore } from "react";
 import { Sparkles } from "lucide-react";
 import { useLang, useT } from "./I18nProvider";
 import LangSwitcher from "./LangSwitcher";
+import NicknameChip from "./NicknameChip";
 import { getOwnerToken, langPath, OWNER_EVENT } from "@/lib/client";
 import { siteName } from "@/lib/site";
 
@@ -38,6 +39,7 @@ export default function SiteHeader() {
                         {t("nav_my")}
                     </Link>
                 )}
+                <NicknameChip />
                 <LangSwitcher />
             </div>
         </header>
