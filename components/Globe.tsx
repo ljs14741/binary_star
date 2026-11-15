@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Maximize2, Minus, Plus, X } from "lucide-react";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { feature, mesh } from "topojson-client";
@@ -13,6 +15,9 @@ import type { CityLight } from "@/lib/stories";
 
 // 밤의 지구본. 땅은 점으로, 공감 온 도시는 빛으로. 지도 데이터는 world-atlas 파일 (외부 호출 없음)
 const R = 1;
+// 카메라 거리 범위 (가까이 1.4 = 나라 하나가 화면에 꽉 참, 멀리 5.2 = 지구 전체)
+const MIN_DIST = 1.4;
+const MAX_DIST = 5.2;
 
 function latLngToVec3(lat: number, lng: number, r: number): THREE.Vector3 {
     const phi = ((90 - lat) * Math.PI) / 180;
@@ -55,7 +60,7 @@ function landPoints(): Float32Array {
         else if (g.type === "MultiPolygon") for (const c of (g as MultiPolygon).coordinates) push({ type: "Polygon", coordinates: c });
     }
     const pts: number[] = [];
-    const step = 1.35;
+    const step = 1.1;
     for (let lat = -58; lat <= 84; lat += step) {
         const lngStep = step / Math.max(Math.cos((lat * Math.PI) / 180), 0.15);
         for (let lng = -180; lng < 180; lng += lngStep) {
@@ -127,8 +132,10 @@ function glowTexture(): THREE.Texture {
     return tex;
 }
 
-export default function Globe({ lights }: { lights: CityLight[] }) {
+// 캔버스 + 확대·축소 버튼. large 면 휠로도 확대 (작은 지구본은 페이지 스크롤을 막지 않게 ctrl+휠·손가락 벌리기만)
+function GlobeCanvas({ lights, large, className, onExpand }: { lights: CityLight[]; large: boolean; className: string; onExpand?: () => void }) {
     const ref = useRef<HTMLDivElement>(null);
+    const zoomRef = useRef<((f: number) => void) | null>(null);
     const t = useT();
 
     useEffect(() => {
@@ -141,7 +148,7 @@ export default function Globe({ lights }: { lights: CityLight[] }) {
         el.appendChild(renderer.domElement);
 
         const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 100);
+        const camera = new THREE.PerspectiveCamera(38, 1, 0.05, 100);
         camera.position.set(0, 0.35, 4.1);
 
         // 지구 본체
@@ -222,7 +229,7 @@ export default function Globe({ lights }: { lights: CityLight[] }) {
         sun.position.set(-3, 2, 4);
         scene.add(sun);
 
-        // 불빛들의 가운데가 정면에 오게 돌리고, 불빛이 한 지역에 모여 있으면 그만큼 가까이(한국만 있으면 한국이 꽉 차게)
+        // 불빛들의 가운데가 정면에 오게 돌리고, 불빛이 한 지역에 모여 있으면 그만큼 가까이. 다만 주변 나라는 보이게 (너무 바짝 붙지 않게)
         let dist = 4.1;
         if (lights.length) {
             const sum = new THREE.Vector3();
@@ -230,40 +237,60 @@ export default function Globe({ lights }: { lights: CityLight[] }) {
             const center = sum.lengthSq() > 1e-6 ? sum.normalize() : latLngToVec3(lights[0].lat, lights[0].lng, 1);
             let spread = 0;
             for (const l of lights) spread = Math.max(spread, center.angleTo(latLngToVec3(l.lat, l.lng, 1)));
-            // 퍼진 각도(라디안) → 카메라 거리. 0.05(한 나라 안) 이면 1.9, 1.2 이상이면 4.1
-            dist = THREE.MathUtils.clamp(1.9 + (spread / 1.2) * 2.2, 1.9, 4.1);
+            // 퍼진 각도(라디안) → 카메라 거리. 한 나라 안이면 2.4, 1.2 이상이면 4.2. 크게 보기에선 조금 더 가까이
+            dist = large ? THREE.MathUtils.clamp(2.0 + (spread / 1.2) * 1.6, 2.0, 3.6) : THREE.MathUtils.clamp(2.4 + (spread / 1.2) * 1.8, 2.4, 4.2);
             camera.position.copy(center.multiplyScalar(dist));
         }
         camera.lookAt(0, 0, 0);
-        camera.near = 0.05;
         camera.updateProjectionMatrix();
 
         const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableZoom = false;
+        controls.enableZoom = true;
+        controls.zoomSpeed = 0.7;
+        controls.minDistance = MIN_DIST;
+        controls.maxDistance = MAX_DIST;
         controls.enablePan = false;
         controls.rotateSpeed = 0.55;
         controls.enableDamping = true;
         controls.dampingFactor = 0.08;
+        controls.touches = { ONE: THREE.TOUCH.ROTATE, TWO: THREE.TOUCH.DOLLY_ROTATE };
         controls.autoRotate = !reduce && dist > 3;
         controls.autoRotateSpeed = 0.5;
         let resumeAt = 0;
+        // 버튼으로 누른 목표 거리 (프레임마다 부드럽게 다가감)
+        let targetDist: number | null = null;
         const onStart = () => {
             controls.autoRotate = false;
             resumeAt = Infinity;
+            targetDist = null;
         };
         const onEnd = () => {
             resumeAt = performance.now() + 4000;
         };
         controls.addEventListener("start", onStart);
         controls.addEventListener("end", onEnd);
+        zoomRef.current = (f) => {
+            const cur = targetDist ?? camera.position.length();
+            targetDist = THREE.MathUtils.clamp(cur * f, MIN_DIST, MAX_DIST);
+            controls.autoRotate = false;
+            resumeAt = performance.now() + 4000;
+        };
+        // 작은 지구본 위에서 그냥 휠은 페이지 스크롤로 (ctrl/⌘+휠만 확대). 캔버스보다 먼저 받아서 OrbitControls 에 안 넘김
+        const onWheel = (e: WheelEvent) => {
+            if (!large && !e.ctrlKey && !e.metaKey) e.stopPropagation();
+        };
+        el.addEventListener("wheel", onWheel, { capture: true, passive: true });
 
         const resize = () => {
+            // 크게 보기는 남는 공간 전체를 씀 (정사각형 틀에 잘리지 않게)
             const w = el.clientWidth;
-            const h = w;
+            const h = large ? Math.max(1, el.clientHeight) : w;
             renderer.setSize(w, h, false);
             renderer.domElement.style.width = w + "px";
             renderer.domElement.style.height = h + "px";
-            camera.aspect = 1;
+            camera.aspect = w / h;
+            // 세로로 긴 화면에선 지구가 좌우로 잘리지 않게 시야를 넓힘
+            camera.fov = w < h ? (2 * Math.atan(Math.tan((38 * Math.PI) / 360) / (w / h)) * 180) / Math.PI : 38;
             camera.updateProjectionMatrix();
         };
         resize();
@@ -272,8 +299,15 @@ export default function Globe({ lights }: { lights: CityLight[] }) {
 
         let raf = 0;
         const tick = (now: number) => {
-            if (!reduce && dist > 3 && resumeAt !== Infinity && now > resumeAt) {
-                controls.autoRotate = true;
+            if (targetDist != null) {
+                const cur = camera.position.length();
+                const next = cur + (targetDist - cur) * 0.14;
+                camera.position.setLength(next);
+                if (Math.abs(targetDist - next) < 0.003) targetDist = null;
+            }
+            // 멀리서 가만히 두면 천천히 돌고, 가까이 당겨 보는 중엔 안 돎
+            if (!reduce && resumeAt !== Infinity && now > resumeAt) {
+                controls.autoRotate = camera.position.length() > 3;
                 resumeAt = Infinity;
             }
             for (const sp of sprites) {
@@ -295,6 +329,8 @@ export default function Globe({ lights }: { lights: CityLight[] }) {
         return () => {
             cancelAnimationFrame(raf);
             ro.disconnect();
+            zoomRef.current = null;
+            el.removeEventListener("wheel", onWheel, { capture: true });
             controls.removeEventListener("start", onStart);
             controls.removeEventListener("end", onEnd);
             controls.dispose();
@@ -307,20 +343,90 @@ export default function Globe({ lights }: { lights: CityLight[] }) {
                 else mat?.dispose();
             });
             tex.dispose();
+            ringTex.dispose();
             if (renderer.domElement.parentNode === el) el.removeChild(renderer.domElement);
         };
-    }, [lights]);
+    }, [lights, large]);
+
+    const btn = "glass flex h-9 w-9 items-center justify-center rounded-full text-ink/90 hover:text-ink active:scale-95";
+    return (
+        <div className={`relative mx-auto w-full ${large ? "h-full" : "aspect-square"} ${className}`}>
+            <div ref={ref} className="h-full w-full touch-none select-none" aria-label="globe" />
+            {onExpand && (
+                <button type="button" onClick={onExpand} aria-label={t("globe_expand")} title={t("globe_expand")} className={`absolute right-1 top-1 ${btn}`}>
+                    <Maximize2 size={16} />
+                </button>
+            )}
+            <div className={`absolute flex flex-col gap-1.5 ${large ? "bottom-3 right-3" : "bottom-1 right-1"}`}>
+                <button type="button" onClick={() => zoomRef.current?.(0.72)} aria-label={t("globe_zoom_in")} title={t("globe_zoom_in")} className={btn}>
+                    <Plus size={16} />
+                </button>
+                <button type="button" onClick={() => zoomRef.current?.(1 / 0.72)} aria-label={t("globe_zoom_out")} title={t("globe_zoom_out")} className={btn}>
+                    <Minus size={16} />
+                </button>
+            </div>
+        </div>
+    );
+}
+
+function Legend({ t }: { t: ReturnType<typeof useT> }) {
+    return (
+        <p className="mt-1 flex items-center justify-center gap-2 text-[11px] text-muted">
+            <span className="inline-block h-2 w-2 rounded-full bg-star shadow-[0_0_8px_#ffd86b]" />
+            <span className="inline-block h-2 w-2 rounded-full bg-rose shadow-[0_0_8px_#ff9bb3]" />
+            {t("globe_legend")}
+        </p>
+    );
+}
+
+// 밤의 지구본 + "크게 보기" (화면 가득한 지구본. 끌어 돌리기·손가락 벌리기·휠·버튼으로 확대)
+export default function Globe({ lights }: { lights: CityLight[] }) {
+    const t = useT();
+    const [big, setBig] = useState(false);
+
+    useEffect(() => {
+        if (!big) return;
+        const prev = document.body.style.overflow;
+        document.body.style.overflow = "hidden";
+        const onKey = (e: KeyboardEvent) => e.key === "Escape" && setBig(false);
+        window.addEventListener("keydown", onKey);
+        return () => {
+            document.body.style.overflow = prev;
+            window.removeEventListener("keydown", onKey);
+        };
+    }, [big]);
 
     return (
         <div>
-            <div ref={ref} className="mx-auto aspect-square w-full max-w-[360px] touch-none select-none" aria-label="globe" />
-            {lights.length > 0 && (
-                <p className="mt-1 flex items-center justify-center gap-2 text-[11px] text-muted">
-                    <span className="inline-block h-2 w-2 rounded-full bg-star shadow-[0_0_8px_#ffd86b]" />
-                    <span className="inline-block h-2 w-2 rounded-full bg-rose shadow-[0_0_8px_#ff9bb3]" />
-                    {t("globe_legend")}
-                </p>
-            )}
+            <GlobeCanvas lights={lights} large={false} className="max-w-[360px]" onExpand={() => setBig(true)} />
+            {lights.length > 0 && <Legend t={t} />}
+            <AnimatePresence>
+                {big && (
+                    <motion.div
+                        role="dialog"
+                        aria-modal
+                        aria-label={t("globe_expand")}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[60] flex flex-col bg-night/95 backdrop-blur-sm"
+                    >
+                        <div className="flex shrink-0 items-center justify-between px-4 pb-1 pt-[max(0.75rem,env(safe-area-inset-top))]">
+                            <h3 className="text-base font-semibold text-ink">{t("globe_expand")}</h3>
+                            <button type="button" onClick={() => setBig(false)} aria-label={t("close")} className="glass flex h-10 w-10 items-center justify-center rounded-full text-ink">
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="min-h-0 flex-1">
+                            <GlobeCanvas lights={lights} large className="" />
+                        </div>
+                        <div className="shrink-0 pb-[max(1rem,env(safe-area-inset-bottom))] pt-1">
+                            {lights.length > 0 && <Legend t={t} />}
+                            <p className="mt-1 text-center text-[11px] text-dim">{t("globe_large_hint")}</p>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 }

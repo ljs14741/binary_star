@@ -32,7 +32,7 @@
 - 하늘 위 요소는 폰 헤더에 가림 → 고도 48도 아래. 세로 화면은 카메라가 3.2 앞
 - Claude 는 docker 그룹 아님, `sudo` 불가, Caddyfile 은 root 소유(수정은 `Caddyfile.new` 만들어 사용자가 cp+reload). compose(`/home/binary/binaryworld/infra/docker-compose.yml`)는 수정 가능
 - 클라우드플레어 뒤라 Caddy `trusted_proxies` 필수(없으면 모든 IP 가 HK). 앱은 X-Forwarded-For 첫 값 사용
-- 로마자 8글자 미만 글은 화면 언어로 저장(`detectLangByScript`)
+- 글 언어 = 쓴 사람의 화면 언어(`app/api/stories/route.ts`). 글자 추정 `detectLangByScript` 는 번역 켤 때 힌트용으로만 남음
 - MySQL 비밀번호 탐색 금지
 
 ## 파일 지도
