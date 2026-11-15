@@ -1,5 +1,7 @@
 // 관리자 페이지: 키 확인 + 통계 집계. 키는 STAR_ADMIN_KEY (없으면 페이지 자체가 404)
 import { timingSafeEqual } from "crypto";
+import { cookies } from "next/headers";
+import { hashWithSecret } from "./crypto";
 import { prisma } from "./prisma";
 import { getPresence } from "./hill";
 import { kstDay, kstDayStart, lastDays } from "./kst";
@@ -11,6 +13,24 @@ export function adminKeyOk(key: string | null | undefined): boolean {
     const want = process.env.STAR_ADMIN_KEY || "";
     if (!want || !key || key.length !== want.length) return false;
     return timingSafeEqual(Buffer.from(key), Buffer.from(want));
+}
+
+// 한 번 키를 넣으면 이 쿠키로 /admin 이 바로 열림. 쿠키엔 키 원문 대신 해시만 (키를 바꾸면 자동으로 풀림)
+export const ADMIN_COOKIE = "star_admin";
+export const ADMIN_COOKIE_DAYS = 90;
+export function adminCookieValue(): string | null {
+    const want = process.env.STAR_ADMIN_KEY || "";
+    return want ? hashWithSecret("admin-cookie", want) : null;
+}
+export async function adminCookieOk(): Promise<boolean> {
+    const want = adminCookieValue();
+    const got = (await cookies()).get(ADMIN_COOKIE)?.value;
+    if (!want || !got || got.length !== want.length) return false;
+    return timingSafeEqual(Buffer.from(got), Buffer.from(want));
+}
+// 키(본문·주소) 또는 로그인 쿠키
+export async function isAdmin(key?: string | null): Promise<boolean> {
+    return adminKeyOk(key) || (await adminCookieOk());
 }
 
 export type AdminStory = { id: number; room: string; lang: string; nickname: string | null; body: string; status: string; empathy: number; reports: number; country: string | null; at: Date; note: string | null };

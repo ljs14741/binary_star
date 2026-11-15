@@ -20,8 +20,8 @@ export function proxy(req: NextRequest) {
         const saved = req.cookies.get(LANG_COOKIE)?.value;
         const lang = isLang(saved) ? saved : pickLang(req.headers.get("accept-language"));
         res = NextResponse.redirect(new URL(`/${lang}${search}`, req.url));
-    } else if (first === "me" || first === "s" || first === "room") {
-        // 언어 없는 짧은 주소 → 언어 붙여서 이동 (/me/{token}, /s/{id})
+    } else if (first === "me" || first === "s" || first === "room" || first === "admin") {
+        // 언어 없는 짧은 주소 → 언어 붙여서 이동 (/me/{token}, /s/{id}, /admin)
         const saved = req.cookies.get(LANG_COOKIE)?.value;
         const lang = isLang(saved) ? saved : pickLang(req.headers.get("accept-language"));
         res = NextResponse.redirect(new URL(`/${lang}${pathname}${search}`, req.url));

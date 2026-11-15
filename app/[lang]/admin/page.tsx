@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
 import { requireLang } from "@/lib/page";
-import { adminKeyOk, getAdminStats, getSwapPlan, TOPIC_SLOTS, type AdminStory } from "@/lib/admin";
+import { isAdmin, getAdminStats, getSwapPlan, TOPIC_SLOTS, type AdminStory } from "@/lib/admin";
 import { flagEmoji, formatDate } from "@/lib/format";
 import AdminActions from "./AdminActions";
 import TopicSwap from "./TopicSwap";
+import AdminLogin from "./AdminLogin";
+import AdminRemember from "./AdminRemember";
 
 // 운영자 통계. /ko/admin?key=STAR_ADMIN_KEY 로만 열림 (키 없거나 틀리면 404). 한국어 고정
 export const dynamic = "force-dynamic";
@@ -50,12 +51,14 @@ function StoryRow({ s, adminKey }: { s: AdminStory; adminKey: string }) {
 export default async function AdminPage({ params, searchParams }: P) {
     await requireLang(params);
     const { key } = await searchParams;
-    if (!adminKeyOk(key)) notFound();
+    if (!(await isAdmin(key))) return <AdminLogin />;
     const [st, plan] = await Promise.all([getAdminStats(), getSwapPlan()]);
     const maxDay = Math.max(1, ...st.visitors.days.map((d) => d.n));
-    const adminKey = key!;
+    // 쿠키로 들어왔으면 키는 비워 둠 (각 API 가 쿠키로 확인)
+    const adminKey = key ?? "";
     return (
         <div className="px-4 pb-16 pt-4">
+            {key && <AdminRemember adminKey={key} />}
             <h1 className="text-xl font-semibold text-ink">관리</h1>
             <p className="mt-0.5 text-[11px] text-dim">{formatDate(new Date(), "ko", { dateStyle: "medium", timeStyle: "short" })} 기준 · 새로고침하면 갱신</p>
 

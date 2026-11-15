@@ -1,4 +1,4 @@
-// 처음 방 6개 + 이번 달 주제 방 + 테스트 이야기(is_seed, 화면에 "테스트" 표시). 여러 번 돌려도 방은 중복 안 됨
+// 주제 방 12개(별자리 12개, 이번 달 주제 포함) + 테스트 이야기(is_seed, 화면에 "테스트" 표시). 여러 번 돌려도 방은 중복 안 됨
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
@@ -60,6 +60,52 @@ const ROOMS: RoomSeed[] = [
             en: ["To me in ten years", "Read this when you get there"],
             ja: ["10年後の自分へ", "その時に必ず読み返して"],
             "zh-TW": ["給十年後的自己", "到時候一定要回來讀"],
+        },
+    },
+    // 2026-11-15 추가: 12 별자리를 채우는 주제 5개
+    {
+        slug: "to-someone-in-heaven", sort: 7,
+        i18n: {
+            ko: ["하늘나라에 있는 당신에게", "먼저 떠난 사람에게 끝내 못 한 말"],
+            en: ["To you, up in heaven", "What I never got to say before you left"],
+            ja: ["天国にいるあなたへ", "先に旅立ったあなたに、言えなかったこと"],
+            "zh-TW": ["給在天上的你", "來不及對先走一步的你說的話"],
+        },
+    },
+    {
+        slug: "to-my-pet-over-the-rainbow", sort: 8,
+        i18n: {
+            ko: ["무지개다리 건너간 아이에게", "같이 살아 줘서 고마웠던 내 강아지·고양이에게"],
+            en: ["To my pet over the rainbow bridge", "Thank you for sharing your life with me"],
+            ja: ["虹の橋を渡ったあの子へ", "一緒に生きてくれてありがとう"],
+            "zh-TW": ["給走過彩虹橋的毛孩子", "謝謝你陪我走過的日子"],
+        },
+    },
+    {
+        slug: "to-a-friend-i-lost-touch-with", sort: 9,
+        i18n: {
+            ko: ["멀어진 친구에게", "연락은 끊겼지만 가끔 생각나는 너에게"],
+            en: ["To the friend I drifted from", "We lost touch, but I still think of you"],
+            ja: ["疎遠になった友へ", "連絡は途切れたけど、時々思い出すきみへ"],
+            "zh-TW": ["給漸行漸遠的朋友", "雖然斷了聯絡，還是會想起你"],
+        },
+    },
+    {
+        slug: "to-my-child", sort: 10,
+        i18n: {
+            ko: ["내 아이에게", "언젠가 커서 읽어 줬으면 하는 말"],
+            en: ["To my child", "Words I hope you'll read when you're grown"],
+            ja: ["わが子へ", "いつか大きくなったら読んでほしいこと"],
+            "zh-TW": ["給我的孩子", "希望你長大後有一天會讀到的話"],
+        },
+    },
+    {
+        slug: "to-you-beside-me", sort: 11,
+        i18n: {
+            ko: ["곁에 있는 당신에게", "매일 보면서도 쑥스러워 못 한 말"],
+            en: ["To you, right beside me", "What I see you every day and still can't say"],
+            ja: ["そばにいるあなたへ", "毎日会っているのに照れて言えないこと"],
+            "zh-TW": ["給在身邊的你", "天天見面卻還是害羞說不出口的話"],
         },
     },
     {
