@@ -139,6 +139,9 @@ function flameTexture(frame: number): THREE.Texture {
     return t;
 }
 
+// 모닥불 불꽃 크기 (2026-11-15 1.5배로 키움)
+const FLAME_W = 1.15, FLAME_H = 1.55;
+
 export class Scenery {
     group = new THREE.Group();
     sky = new THREE.Group(); // 오로라처럼 하늘에 붙는 것 (HillScene 이 카메라를 따라 옮김)
@@ -148,6 +151,9 @@ export class Scenery {
     private lampGlow: THREE.Sprite;
     private lampHalo: THREE.Sprite;
     private flame: THREE.Sprite;
+    private flameCore: THREE.Sprite;
+    private smoke: { s: THREE.Sprite; born: number; life: number; drift: number }[] = [];
+    private smokeTex: THREE.Texture;
     private flameFrames: THREE.Texture[];
     private fireGlow: THREE.Mesh;
     private embers: { s: THREE.Sprite; born: number; life: number; vx: number; vz: number }[] = [];
@@ -236,34 +242,43 @@ export class Scenery {
         this.beam.position.copy(lampPos);
         this.group.add(this.beam);
 
-        // ---- 모닥불: 장작 3개 + 불꽃 스프라이트 + 바닥 불빛 + 불씨
+        // ---- 모닥불: 장작 5개(원뿔로 기댐) + 불꽃 두 겹 + 바닥 불빛 + 불씨 + 옅은 연기
         const logMat = new THREE.MeshBasicMaterial({ color: "#3a2416" });
-        for (let i = 0; i < 3; i++) {
-            const log = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.08, 0.9, 6), logMat);
-            log.rotation.z = Math.PI / 2 - 0.35;
-            log.rotation.y = (i * Math.PI * 2) / 3;
-            log.position.set(fireX, fireY + 0.12, fireZ);
+        const logMat2 = new THREE.MeshBasicMaterial({ color: "#2c1a10" });
+        for (let i = 0; i < 5; i++) {
+            const log = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.11, 1.3, 6), i % 2 ? logMat2 : logMat);
+            log.rotation.z = Math.PI / 2 - 0.42;
+            log.rotation.y = (i * Math.PI * 2) / 5 + 0.3;
+            log.position.set(fireX, fireY + 0.18, fireZ);
             this.group.add(log);
         }
         const stoneMat = new THREE.MeshBasicMaterial({ color: "#2a2f45" });
-        for (let i = 0; i < 7; i++) {
-            const a = (i / 7) * Math.PI * 2;
-            const st = new THREE.Mesh(new THREE.SphereGeometry(0.1 + (i % 3) * 0.02, 6, 5), stoneMat);
-            st.position.set(fireX + Math.cos(a) * 0.62, fireY + 0.05, fireZ + Math.sin(a) * 0.62);
+        const stoneMat2 = new THREE.MeshBasicMaterial({ color: "#363c58" });
+        for (let i = 0; i < 11; i++) {
+            const a = (i / 11) * Math.PI * 2;
+            const st = new THREE.Mesh(new THREE.SphereGeometry(0.13 + (i % 3) * 0.03, 6, 5), i % 2 ? stoneMat2 : stoneMat);
+            st.position.set(fireX + Math.cos(a) * 0.92, fireY + 0.06, fireZ + Math.sin(a) * 0.92);
             st.scale.y = 0.6;
             this.group.add(st);
         }
         this.flameFrames = [0, 1, 2, 3, 4, 5].map(flameTexture);
         this.flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.flameFrames[0], transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
         this.flame.center.set(0.5, 0.06);
-        this.flame.scale.set(0.75, 1.0, 1);
-        this.flame.position.set(fireX, fireY + 0.1, fireZ);
+        this.flame.scale.set(FLAME_W, FLAME_H, 1);
+        this.flame.position.set(fireX, fireY + 0.12, fireZ);
         this.group.add(this.flame);
-        this.fireGlow = new THREE.Mesh(new THREE.PlaneGeometry(5.5, 5.5), new THREE.MeshBasicMaterial({ map: glowTexture("255,150,70"), transparent: true, opacity: 0.4, depthWrite: false, blending: THREE.AdditiveBlending }));
+        // 안쪽 작은 불꽃 (다른 그림으로 엇갈려 일렁여 깊이감)
+        this.flameCore = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.flameFrames[3], transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.85 }));
+        this.flameCore.center.set(0.5, 0.06);
+        this.flameCore.scale.set(FLAME_W * 0.6, FLAME_H * 0.7, 1);
+        this.flameCore.position.set(fireX, fireY + 0.14, fireZ + 0.02);
+        this.group.add(this.flameCore);
+        this.fireGlow = new THREE.Mesh(new THREE.PlaneGeometry(7.5, 7.5), new THREE.MeshBasicMaterial({ map: glowTexture("255,150,70"), transparent: true, opacity: 0.45, depthWrite: false, blending: THREE.AdditiveBlending }));
         this.fireGlow.rotation.x = -Math.PI / 2;
         this.fireGlow.position.set(fireX, fireY + 0.04, fireZ);
         this.group.add(this.fireGlow);
         this.emberTex = glowTexture("255,170,90");
+        this.smokeTex = glowTexture("150,150,170");
         this.dolphinTex = dolphinTexture();
         this.nextDolphin = 14 + Math.random() * 10;
     }
@@ -396,16 +411,43 @@ export class Scenery {
             const fm = this.flame.material as THREE.SpriteMaterial;
             fm.map = this.flameFrames[Math.floor(Math.random() * this.flameFrames.length)];
             fm.needsUpdate = true;
+            const cm = this.flameCore.material as THREE.SpriteMaterial;
+            cm.map = this.flameFrames[Math.floor(Math.random() * this.flameFrames.length)];
+            cm.needsUpdate = true;
         }
         const flick = this.opts.reduceMotion ? 1 : 0.92 + 0.08 * Math.sin(now * 13.1) + 0.05 * Math.sin(now * 7.3);
-        this.flame.scale.set(0.75 * (0.95 + (1 - flick) * 0.6), 1.0 * flick, 1);
-        (this.fireGlow.material as THREE.MeshBasicMaterial).opacity = 0.32 + 0.1 * flick + (this.opts.reduceMotion ? 0 : 0.04 * Math.sin(now * 9.7));
+        this.flame.scale.set(FLAME_W * (0.95 + (1 - flick) * 0.6), FLAME_H * flick, 1);
+        const flick2 = this.opts.reduceMotion ? 1 : 0.9 + 0.1 * Math.sin(now * 17.3 + 1.1);
+        this.flameCore.scale.set(FLAME_W * 0.6 * (1.05 - (flick2 - 0.9)), FLAME_H * 0.7 * flick2, 1);
+        (this.fireGlow.material as THREE.MeshBasicMaterial).opacity = 0.36 + 0.1 * flick + (this.opts.reduceMotion ? 0 : 0.05 * Math.sin(now * 9.7));
+
+        // 연기: 아주 옅게, 천천히 올라가며 퍼짐
+        if (!this.opts.reduceMotion && this.smoke.length < (this.opts.isMobile ? 4 : 6) && Math.random() < dt * 1.2) {
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.smokeTex, transparent: true, opacity: 0, depthWrite: false }));
+            s.position.set(this.firePos.x + (Math.random() - 0.5) * 0.2, this.firePos.y + FLAME_H * 0.9, this.firePos.z);
+            this.group.add(s);
+            this.smoke.push({ s, born: now, life: 4 + Math.random() * 2, drift: (Math.random() - 0.5) * 0.2 });
+        }
+        this.smoke = this.smoke.filter((m) => {
+            const t = (now - m.born) / m.life;
+            if (t >= 1) {
+                this.group.remove(m.s);
+                m.s.material.dispose();
+                return false;
+            }
+            m.s.position.y += dt * 0.45;
+            m.s.position.x += (m.drift + 0.08) * dt;
+            const sz = 0.5 + t * 1.6;
+            m.s.scale.set(sz, sz, 1);
+            m.s.material.opacity = 0.12 * Math.sin(Math.PI * t);
+            return true;
+        });
 
         // 불씨: 가끔 하나 띄워 위로 흩날림
-        if (!this.opts.reduceMotion && this.embers.length < (this.opts.isMobile ? 6 : 10) && Math.random() < dt * 3) {
+        if (!this.opts.reduceMotion && this.embers.length < (this.opts.isMobile ? 10 : 16) && Math.random() < dt * 5) {
             const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.emberTex, transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
-            s.scale.set(0.09, 0.09, 1);
-            s.position.set(this.firePos.x + (Math.random() - 0.5) * 0.3, this.firePos.y + 0.5, this.firePos.z + (Math.random() - 0.5) * 0.3);
+            s.scale.set(0.1, 0.1, 1);
+            s.position.set(this.firePos.x + (Math.random() - 0.5) * 0.5, this.firePos.y + 0.75, this.firePos.z + (Math.random() - 0.5) * 0.5);
             this.group.add(s);
             this.embers.push({ s, born: now, life: 1.4 + Math.random() * 1.2, vx: (Math.random() - 0.5) * 0.25, vz: (Math.random() - 0.5) * 0.25 });
         }
@@ -428,5 +470,7 @@ export class Scenery {
         this.dolphinTex.dispose();
         for (const f of this.flameFrames) f.dispose();
         for (const e of this.embers) e.s.material.dispose();
+        for (const m of this.smoke) m.s.material.dispose();
+        this.smokeTex.dispose();
     }
 }

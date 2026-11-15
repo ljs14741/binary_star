@@ -25,6 +25,7 @@ import { SISTER_SITES, siteName, sisterUrl } from "@/lib/site";
 type Props = { initialTotal: number };
 
 const INTRO_KEY = "star_intro_seen";
+const INTRO_N = 4; // 처음 안내 장 수 (messages 의 intro_1~4)
 const EMOTE_LABEL: Partial<Record<Gesture, string>> = { wave: "👋", heart: "💛", pat: "🤗", tear: "🥲", joy: "😊", lookup: "✨" };
 const DONATE_URL = "https://qr.kakaopay.com/Ej9JnRsvn"; // game 과 같은 카카오페이 송금 링크
 
@@ -140,6 +141,10 @@ function Hill3D({ initialTotal }: Props) {
         flashTimer.current = setTimeout(() => setToastLine(null), 2600);
     }, []);
     const shownTotal = status === "open" ? total : initialTotal;
+    // 혼자거나 둘뿐이면 불 둘레에 그림자 요정을 앉혀 덜 쓸쓸하게
+    useEffect(() => {
+        sceneRef.current?.setGhosts(shownTotal <= 1 ? 3 : shownTotal === 2 ? 2 : shownTotal === 3 ? 1 : 0);
+    }, [shownTotal, sky]);
 
     const openStory = useCallback(
         async (id: number) => {
@@ -477,23 +482,23 @@ function Hill3D({ initialTotal }: Props) {
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 z-30 flex items-center justify-center bg-night/70 p-6 backdrop-blur-sm">
                         <motion.div key={intro} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="w-full max-w-[400px] text-center">
                             <Sparkles size={28} className="mx-auto mb-4 text-star" />
-                            <p className="whitespace-pre-line text-lg font-semibold leading-relaxed text-ink">{t(`intro_${intro + 1}` as "intro_1")}</p>
+                            <p className="whitespace-pre-line break-keep text-lg font-semibold leading-relaxed text-ink">{t(`intro_${intro + 1}` as "intro_1")}</p>
                             <div className="mt-6 flex items-center justify-center gap-1.5">
-                                {[0, 1, 2].map((i) => (
+                                {Array.from({ length: INTRO_N }, (_, i) => (
                                     <span key={i} className={`h-1.5 rounded-full ${i === intro ? "w-5 bg-star" : "w-1.5 bg-white/35"}`} />
                                 ))}
                             </div>
                             <button
                                 onClick={() => {
                                     armSound();
-                                    if (intro < 2) setIntroStep(intro + 1);
+                                    if (intro < INTRO_N - 1) setIntroStep(intro + 1);
                                     else closeIntro();
                                 }}
                                 className="btn-star mt-6 rounded-full px-6 py-2.5 text-sm font-semibold"
                             >
-                                {intro < 2 ? t("intro_next") : t("intro_start")}
+                                {intro < INTRO_N - 1 ? t("intro_next") : t("intro_start")}
                             </button>
-                            {intro < 2 && (
+                            {intro < INTRO_N - 1 && (
                                 <button onClick={closeIntro} className="mt-3 block w-full text-xs text-dim">
                                     {t("intro_skip")}
                                 </button>

@@ -128,6 +128,9 @@ export default function ShareSheet({ open, onClose, target }: { open: boolean; o
                     title: `${target.title} · ${target.text}`.slice(0, 100),
                     description: target.description ?? "",
                     imageUrl: target.imageUrl ?? "",
+                    // 그림 크기를 알려 줘야 카카오가 기본 비율로 자르지 않음 (공유 이미지는 모두 1200x630)
+                    imageWidth: 1200,
+                    imageHeight: 630,
                     link: { mobileWebUrl: target.url, webUrl: target.url },
                 },
                 buttons: [{ title: t("story_empathy"), link: { mobileWebUrl: target.url, webUrl: target.url } }],

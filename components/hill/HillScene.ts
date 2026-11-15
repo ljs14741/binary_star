@@ -7,7 +7,7 @@ import * as THREE from "three";
 import type { SkyData, SkyStar } from "@/lib/hill";
 import type { Lang } from "@/lib/i18n/config";
 import type { Gesture, MemberPublic, Pose, StarEvent } from "@/lib/realtime/protocol";
-import { FIRE_POS, HILL_HALF_D, HILL_HALF_W } from "@/lib/realtime/protocol";
+import { FIRE_KEEP_OUT, FIRE_POS, HILL_HALF_D, HILL_HALF_W } from "@/lib/realtime/protocol";
 import type { Sfx } from "@/lib/sound";
 import { CREATURE_KINDS, creatureTexture, glowTexture, heartTexture, ME_PALETTE, PALETTES, textTexture, wrapTitle, type CreatureKind, type Palette } from "./sprites";
 import { assignRooms, ZODIAC, type Shape } from "./constellations";
@@ -156,6 +156,8 @@ export class HillScene {
     private sky = new THREE.Group();
     private pendingNames = new Map<number, string | null>(); // 사람이 화면에 생기기 전에 온 별명
     private gifts: { sprite: THREE.Sprite; from: number; to: number; born: number }[] = [];
+    // 혼자일 때 불 둘레에 앉아 있는 흐린 그림자 요정 (사람 아님: 이름·터치·인원 수 없음)
+    private ghosts: { s: THREE.Sprite; phase: number }[] = [];
     private lastEmote = 0;
     private meId: number | null = null;
     private texCache = new Map<string, Record<CreatureKind, THREE.Texture>>();
@@ -293,7 +295,7 @@ export class HillScene {
             const c = bottom.clone().lerp(top, t).lerp(edge, far * far);
             // 모닥불 둘레는 살짝 따뜻하게
             const df = Math.hypot(x - FIRE_POS.x, z - FIRE_POS.z);
-            c.lerp(warm, Math.max(0, 1 - df / 3.2) * 0.55);
+            c.lerp(warm, Math.max(0, 1 - df / 4.2) * 0.6);
             colors[i * 3] = c.r;
             colors[i * 3 + 1] = c.g;
             colors[i * 3 + 2] = c.b;
@@ -808,6 +810,29 @@ export class HillScene {
         sp.renderOrder = 6;
         p.group.add(sp);
         p.bubble = { sprite: sp, born: this.clock.getElapsedTime() };
+    }
+
+    // 그림자 요정 수 맞추기 (진짜 사람이 늘면 줄임)
+    setGhosts(n: number) {
+        const seats = [200, 340, 150, 30].map((deg) => deg * DEG); // 불 양옆·뒤 (카메라와 불 사이는 피함)
+        n = Math.max(0, Math.min(n, seats.length));
+        while (this.ghosts.length > n) {
+            const g = this.ghosts.pop()!;
+            this.scene.remove(g.s);
+            g.s.material.dispose();
+        }
+        while (this.ghosts.length < n) {
+            const i = this.ghosts.length;
+            const pal = PALETTES[(i * 3 + 1) % PALETTES.length];
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.tex(pal).idle, transparent: true, opacity: 0, depthWrite: false, color: 0xb8c4ff }));
+            s.scale.set(1.15, 1.15, 1);
+            s.center.set(0.5, 0.1);
+            const r = FIRE_KEEP_OUT + 0.9;
+            const x = FIRE_POS.x + Math.cos(seats[i]) * r, z = FIRE_POS.z + Math.sin(seats[i]) * r;
+            s.position.set(x, hillHeight(x, z) + 0.05, z);
+            this.scene.add(s);
+            this.ghosts.push({ s, phase: Math.random() * 6 });
+        }
     }
 
     // 내 요정의 감정 표현 (바로 보여 주고, 서버로도 보냄)
@@ -1479,6 +1504,13 @@ export class HillScene {
             });
         }
         this.layoutTags(dt);
+        // 그림자 요정: 천천히 나타나 아주 흐리게 숨 쉬듯
+        for (const g of this.ghosts) {
+            const m = g.s.material;
+            const want = 0.26 + (this.opts.reduceMotion ? 0 : 0.05 * Math.sin(now * 0.8 + g.phase));
+            m.opacity += (want - m.opacity) * Math.min(1, dt * 1.5);
+            g.s.position.y += (this.opts.reduceMotion ? 0 : Math.sin(now * 1.4 + g.phase) * 0.0006);
+        }
         // 날아가는 하트 (마음 보내기)
         this.gifts = this.gifts.filter((g) => {
             const a = this.people.get(g.from), b = this.people.get(g.to);

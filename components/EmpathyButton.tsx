@@ -26,7 +26,12 @@ export default function EmpathyButton({ storyId, count, empathized, mine, size =
         setBusy(true);
         const optimistic = { count: count + (empathized ? -1 : 1), empathized: !empathized };
         onChange?.(optimistic);
-        if (!empathized) setBurst((b) => b + 1);
+        if (!empathized) {
+            setBurst((b) => b + 1);
+            try {
+                navigator.vibrate?.(14);
+            } catch {}
+        }
         const r = await api<{ count: number; empathized: boolean }>(`/api/stories/${storyId}/empathy`, { method: "POST" });
         if (r.ok) onChange?.({ count: r.count, empathized: r.empathized });
         else {

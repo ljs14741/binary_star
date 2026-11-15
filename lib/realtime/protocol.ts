@@ -11,7 +11,7 @@ export const HILL_HALF_D = 4.5;
 export const HILL_CAP = 60; // 언덕 정원. 모닥불 둘레에 겹치지 않고 앉을 수 있는 수 (넘치면 같은 하늘의 두 번째 언덕)
 export const MIN_SEAT_DIST = 0.9; // 자리 사이 최소 거리
 export const FIRE_POS = { x: 0, z: -1.2 }; // 모닥불 자리 (언덕 가운데 조금 앞). 자리 배정 때 피함
-export const FIRE_KEEP_OUT = 1.3;
+export const FIRE_KEEP_OUT = 1.7; // 불 둘레 빈자리 (모닥불 키우며 1.3 → 1.7)
 export const TICK_MS = 100; // 10Hz 묶음 전송
 export const DAILY_WINDOW_MS = 10 * 60 * 1000; // 의식 뒤 10분 안에 들어오면 같은 연출
 
