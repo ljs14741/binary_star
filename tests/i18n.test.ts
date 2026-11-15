@@ -37,3 +37,24 @@ describe("언어", () => {
         expect(detectLangByScript("lol ok", "ko")).toBe("ko");
     });
 });
+
+import { allNicknames, randomNickname } from "@/lib/nickname";
+import { cleanNickname } from "@/lib/stories";
+import { NICKNAME_MAX_LEN } from "@/lib/site";
+
+describe("자동 별명", () => {
+    it("모든 조합이 길이 안이고 별명 검사를 통과", () => {
+        for (const l of LANGS) {
+            const all = allNicknames(l);
+            expect(all.length).toBeGreaterThan(30);
+            for (const n of all) {
+                expect(n.length).toBeLessThanOrEqual(NICKNAME_MAX_LEN);
+                expect(cleanNickname(n)).toEqual({ ok: true, value: n });
+            }
+        }
+    });
+    it("다른 별명 뽑기는 지금 별명과 다름", () => {
+        const cur = randomNickname("ko");
+        for (let i = 0; i < 20; i++) expect(randomNickname("ko", Math.random, cur)).not.toBe(cur);
+    });
+});

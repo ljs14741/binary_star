@@ -182,9 +182,11 @@ export const en: { [K in keyof typeof ko]: string } = {
         "1. Stories are published anonymously. The operator may hide or remove abusive, hateful, advertising, personal-information or defamatory content without notice.\n\n2. Stories reported by several users are hidden automatically.\n\n3. Stories suggesting self-harm or suicide are not published, remain visible only to the author, and come with helpline information.\n\n4. Posted stories may be translated and rendered into share-card images within the service.\n\n5. The service may change or stop without notice.",
 
     // 2차 추가: 별명·수정·내리기·지구본 범례·캐릭터
-    nickname_label: "Nickname (optional)",
+    nickname_label: "Nickname",
     nickname_placeholder: "e.g. night cat",
     nickname_err: "That nickname isn't allowed",
+    nickname_reroll: "Another",
+    nickname_hint: "We picked one for you. Change it anytime, or clear it to post anonymously",
     anonymous_name: "Anonymous",
     edited_mark: "edited",
     me_edit: "Edit",

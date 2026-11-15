@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Link2, Send, Share2, Check, KeyRound } from "lucide-react";
+import { Link2, Send, Share2, Check, KeyRound, Dices } from "lucide-react";
 import type { StoryView } from "@/lib/stories";
 import { AGE_GROUPS, NICKNAME_MAX_LEN, STORY_MAX_LEN } from "@/lib/site";
+import { randomNickname } from "@/lib/nickname";
 import { useLang, useT } from "./I18nProvider";
 import { addMineId, api, langPath, setOwnerToken, siteOrigin } from "@/lib/client";
 import StoryCard from "./StoryCard";
@@ -35,6 +36,13 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
     const [body, setBody] = useState("");
     const [age, setAge] = useState<string | null>(null);
     const [nickname, setNickname] = useState("");
+    // 고친 별명은 바로 기억 (다음 글에도 이어짐)
+    const changeNickname = (v: string) => {
+        setNickname(v);
+        try {
+            localStorage.setItem("star_nickname", v.trim());
+        } catch {}
+    };
     const [linkSaved, setLinkSaved] = useState(false);
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState<string | null>(null);
@@ -46,14 +54,19 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
         let raf = 0;
         try {
             const d = sessionStorage.getItem(`draft:${roomSlug}`);
-            const n = localStorage.getItem("star_nickname") || "";
+            // 별명: 처음이면(저장된 적 없음) 자동으로 하나 정해 줌. 일부러 지운 사람("")은 익명 그대로
+            let n = localStorage.getItem("star_nickname");
+            if (n === null) {
+                n = randomNickname(lang);
+                localStorage.setItem("star_nickname", n);
+            }
             raf = requestAnimationFrame(() => {
                 if (d) setBody(d);
                 if (n) setNickname(n);
             });
         } catch {}
         return () => cancelAnimationFrame(raf);
-    }, [roomSlug]);
+    }, [roomSlug, lang]);
     useEffect(() => {
         try {
             sessionStorage.setItem(`draft:${roomSlug}`, body);
@@ -178,13 +191,19 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
             </div>
 
             <p className="mb-2 mt-4 text-sm text-muted">{t("nickname_label")}</p>
-            <input
-                value={nickname}
-                onChange={(e) => setNickname(e.target.value.slice(0, NICKNAME_MAX_LEN))}
-                placeholder={t("nickname_placeholder")}
-                maxLength={NICKNAME_MAX_LEN}
-                className="glass w-full rounded-2xl px-4 py-2.5 text-[15px] text-ink placeholder:text-dim"
-            />
+            <div className="flex gap-2">
+                <input
+                    value={nickname}
+                    onChange={(e) => changeNickname(e.target.value.slice(0, NICKNAME_MAX_LEN))}
+                    placeholder={t("anonymous_name")}
+                    maxLength={NICKNAME_MAX_LEN}
+                    className="glass min-w-0 flex-1 rounded-2xl px-4 py-2.5 text-[15px] text-ink placeholder:text-dim"
+                />
+                <button type="button" onClick={() => changeNickname(randomNickname(lang, Math.random, nickname))} aria-label={t("nickname_reroll")} title={t("nickname_reroll")} className="glass flex shrink-0 items-center gap-1.5 rounded-2xl px-3 text-[13px] text-muted active:scale-95">
+                    <Dices size={16} /> {t("nickname_reroll")}
+                </button>
+            </div>
+            <p className="mt-1 text-[11px] text-dim">{t("nickname_hint")}</p>
 
             <p className="mb-2 mt-4 text-sm text-muted">{t("write_age")}</p>
             <div className="flex flex-wrap gap-2">

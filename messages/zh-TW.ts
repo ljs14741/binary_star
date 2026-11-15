@@ -182,9 +182,11 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
         "1. 故事以匿名方式公開，營運者可不經預告將辱罵、歧視、廣告、洩露個資或誹謗他人的內容設為非公開或刪除。\n\n2. 被多位使用者檢舉的故事會自動隱藏。\n\n3. 暗示自傷或自殺的故事不會公開，只有作者看得到，並附上諮詢專線資訊。\n\n4. 留下的故事可能在服務內用於翻譯及產生分享卡片圖片。\n\n5. 服務可能不經預告而變更或終止。",
 
     // 2차 추가: 별명·수정·내리기·지구본 범례·캐릭터
-    nickname_label: "暱稱（選填）",
+    nickname_label: "暱稱",
     nickname_placeholder: "例：夜貓",
     nickname_err: "暱稱含有不允許的字詞",
+    nickname_reroll: "換一個",
+    nickname_hint: "先幫你取了一個暱稱，可以隨時修改，清空就會匿名發表",
     anonymous_name: "匿名",
     edited_mark: "已編輯",
     me_edit: "編輯",
