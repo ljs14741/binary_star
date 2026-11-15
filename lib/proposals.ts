@@ -2,7 +2,7 @@ import { prisma } from "./prisma";
 import type { Lang } from "./i18n/config";
 import { LANGS } from "./i18n/config";
 import { hasBannedWord, hasUrl } from "./moderation";
-import { DAILY_PROPOSAL_LIMIT, PROPOSAL_MAX_LEN, PROPOSAL_THRESHOLD } from "./site";
+import { DAILY_PROPOSAL_LIMIT, PROPOSAL_MAX_LEN } from "./site";
 import { aiEnabled, aiTranslate } from "./ai";
 import type { Geo } from "./geo";
 
@@ -87,11 +87,8 @@ export async function toggleProposalEmpathy(id: number, voterKey: string): Promi
     } catch {
         return { ok: true, empathized: true, count, promotedSlug: null };
     }
-    let promotedSlug: string | null = null;
-    if (count >= PROPOSAL_THRESHOLD && p.auto_approve) {
-        promotedSlug = await promoteProposal(id);
-    }
-    return { ok: true, empathized: true, count, promotedSlug };
+    // 공감이 많아도 바로 방이 되지 않음. 매달 관리자가 공감 1위 제안과 가장 조용한 주제를 맞바꿈 (lib/admin.ts swapTopic)
+    return { ok: true, empathized: true, count, promotedSlug: null };
 }
 
 function slugify(title: string, id: number): string {

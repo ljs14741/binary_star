@@ -149,15 +149,16 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     featured_result_link: "看結果",
 
     propose_title: "提議新主題",
-    propose_sub: "累積 {n} 個共鳴就會成為正式房間",
+    propose_sub: "每個月共鳴最多的提議，會成為下個月的新主題",
     propose_placeholder: "例：給當兵的朋友",
     propose_submit: "提議",
     propose_list_title: "已提議的主題",
     propose_empty: "還沒有提議",
-    propose_promoted: "已成為正式房間",
+    propose_promoted: "已成為主題",
     propose_err_limit: "今天的提議額度用完了",
     propose_err_dup: "已有相同的提議",
-    propose_progress: "{n} / {max}",
+    propose_progress: "共鳴 {n}",
+    room_closed: "這是過去的主題，可以閱讀和共鳴，但不能寫新故事",
 
     nf_title: "找不到",
     nf_body: "網址錯了，或故事已被移除",
@@ -172,7 +173,7 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
 
     about_title: "關於",
     about_body:
-        "{site} 是在主題房間裡讀陌生人的故事、共鳴，也留下自己故事的地方。\n\n短短一句或長長一篇都可以。不需要註冊。你的故事會自動翻譯，讓其他國家的人也能讀到並共鳴，而共鳴傳來的城市會在夜晚的地球儀上亮起。\n\n把「幫我共鳴」連結傳給朋友，朋友會先讀你的故事、共鳴，然後也能留下自己的故事。\n\n任何人都能提議新主題，累積 {threshold} 個共鳴就會成為正式房間。",
+        "{site} 是在主題房間裡讀陌生人的故事、共鳴，也留下自己故事的地方。\n\n短短一句或長長一篇都可以。不需要註冊。你的故事會自動翻譯，讓其他國家的人也能讀到並共鳴，而共鳴傳來的城市會在夜晚的地球儀上亮起。\n\n把「幫我共鳴」連結傳給朋友，朋友會先讀你的故事、共鳴，然後也能留下自己的故事。\n\n主題就像天上的星座一樣有 12 個。任何人都能提議新主題，每個月共鳴最多的提議會取代最冷清的主題。",
     privacy_title: "隱私權政策",
     privacy_body:
         "1. 沒有註冊，因此不會收集姓名、Email、電話等資料。\n\n2. 留下故事時會在瀏覽器儲存一個隨機權杖，伺服器只儲存其雜湊值。權杖包含在「我的卡片連結」中，知道連結的人都能看到你的卡片。\n\n3. 為防止重複共鳴，我們儲存瀏覽器 Cookie 隨機值與連線 IP 混合後的雜湊值，不儲存原始 IP。\n\n4. 為了在地球儀上顯示共鳴來源，我們以 IP 推估國家與城市，只儲存國家代碼與城市名稱。位置資料來自 DB-IP（CC BY 4.0）。\n\n5. 故事中的電話、Email、身分證字號、帳號等樣式會在公開前自動遮蔽。\n\n6. 我們可能使用 Google Analytics 進行流量統計、使用 Google AdSense 支應營運費用，並遵循各服務的 Cookie 政策。\n\n7. 若要刪除故事，請附上「我的卡片連結」聯絡營運者。",
@@ -266,7 +267,7 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     // 번역(AI 키) 꺼졌을 때 문구 · 오류 페이지
     anon_notice_local: "匿名・免註冊",
     after_public_local: "已公開",
-    about_body_local: "{site} 是在主題房間裡讀陌生人的故事、共鳴，也留下自己故事的地方。\n\n短短一句或長長一篇都可以。不需要註冊。共鳴傳來的城市會在夜晚的地球儀上亮起。\n\n把「幫我共鳴」連結傳給朋友，朋友會先讀你的故事、共鳴，然後也能留下自己的故事。\n\n任何人都能提議新主題，累積 {threshold} 個共鳴就會成為正式房間。",
+    about_body_local: "{site} 是在主題房間裡讀陌生人的故事、共鳴，也留下自己故事的地方。\n\n短短一句或長長一篇都可以。不需要註冊。共鳴傳來的城市會在夜晚的地球儀上亮起。\n\n把「幫我共鳴」連結傳給朋友，朋友會先讀你的故事、共鳴，然後也能留下自己的故事。\n\n主題就像天上的星座一樣有 12 個。任何人都能提議新主題，每個月共鳴最多的提議會取代最冷清的主題。",
     error_title: "出了點問題",
     error_sub: "重試仍無效的話，請稍後再來",
     error_retry: "再試一次",

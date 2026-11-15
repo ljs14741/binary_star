@@ -4,9 +4,10 @@ import { prisma } from "@/lib/prisma";
 import { createStory, toggleEmpathy, reportStory, getFeed, getMine, getPublicStory } from "@/lib/stories";
 import { createProposal, toggleProposalEmpathy } from "@/lib/proposals";
 import { getTop } from "@/lib/rooms";
+import { swapTopic } from "@/lib/admin";
 import { hashOwnerToken } from "@/lib/crypto";
 import { resetRateLimit } from "@/lib/ratelimit";
-import { PROPOSAL_THRESHOLD, REPORT_HIDE_COUNT } from "@/lib/site";
+import { REPORT_HIDE_COUNT } from "@/lib/site";
 import { EMPTY_GEO } from "@/lib/geo";
 
 const SLUG = "__test_room__";
@@ -133,25 +134,31 @@ describe("피드·1위", () => {
 });
 
 describe("주제 제안", () => {
-    it(`공감 ${PROPOSAL_THRESHOLD}개면 정식 방이 됨 (4개 언어 이름 포함)`, async () => {
+    it("공감이 많아도 바로 방이 안 되고, 관리자 교체로 주제가 됨 (조용한 주제는 읽기 전용)", async () => {
         const p = await createProposal("__테스트 제안 방", "ko", vk("p0"), seoul);
         expect(p.ok).toBe(true);
         if (!p.ok) return;
         expect(await createProposal("__테스트 제안 방", "ko", vk("p1"), seoul)).toMatchObject({ ok: false, error: "dup" });
         expect(await createProposal("https://spam.com", "ko", vk("p1"), seoul)).toMatchObject({ ok: false, error: "banned" });
-        let slug: string | null = null;
-        for (let i = 0; i < PROPOSAL_THRESHOLD; i++) {
+        for (let i = 0; i < 5; i++) {
             const r = await toggleProposalEmpathy(p.proposal.id, vk(`pe${i}`));
-            expect(r.ok).toBe(true);
-            if (r.ok && r.promotedSlug) slug = r.promotedSlug;
+            expect(r).toMatchObject({ ok: true, promotedSlug: null });
         }
-        expect(slug).toBeTruthy();
-        const room = await prisma.room.findUnique({ where: { slug: slug! }, include: { i18n: true } });
+        expect((await prisma.room_proposal.findUnique({ where: { id: p.proposal.id } }))?.status).toBe("open");
+        // 내려갈 주제 하나 만들고 교체
+        const old = await prisma.room.create({ data: { slug: "__test-close", sort_order: 997, i18n: { create: [{ lang: "ko", title: "내려갈 방", description: "" }] } } });
+        const r = await swapTopic(p.proposal.id, old.id);
+        expect(r.ok).toBe(true);
+        if (!r.ok) return;
+        const room = await prisma.room.findUnique({ where: { slug: r.slug }, include: { i18n: true } });
         expect(room?.i18n.map((i) => i.lang).sort()).toEqual(["en", "ja", "ko", "zh-TW"]);
         expect((await prisma.room_proposal.findUnique({ where: { id: p.proposal.id } }))?.status).toBe("promoted");
-        // 승격된 방에 바로 글을 쓸 수 있음
-        const s = await createStory({ roomSlug: slug!, body: "새 방 첫 글", lang: "ko", voterKey: vk("p9"), geo: seoul });
-        expect(s.ok).toBe(true);
+        expect((await prisma.room.findUnique({ where: { id: old.id } }))?.status).toBe("closed");
+        // 새 주제엔 바로 글을 쓸 수 있고, 내려간 주제엔 못 씀
+        expect((await createStory({ roomSlug: r.slug, body: "새 방 첫 글", lang: "ko", voterKey: vk("p9"), geo: seoul })).ok).toBe(true);
+        expect(await createStory({ roomSlug: "__test-close", body: "못 씀", lang: "ko", voterKey: vk("p8"), geo: seoul })).toMatchObject({ ok: false, error: "room" });
+        // 이미 올린 제안은 다시 못 올림
+        expect(await swapTopic(p.proposal.id, null)).toMatchObject({ ok: false });
         // 하루 3개 제한
         await createProposal("__테스트 제안 2", "ko", vk("p0"), seoul);
         await createProposal("__테스트 제안 3", "ko", vk("p0"), seoul);

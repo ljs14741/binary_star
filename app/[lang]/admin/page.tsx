@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { requireLang } from "@/lib/page";
-import { adminKeyOk, getAdminStats, type AdminStory } from "@/lib/admin";
+import { adminKeyOk, getAdminStats, getSwapPlan, TOPIC_SLOTS, type AdminStory } from "@/lib/admin";
 import { flagEmoji, formatDate } from "@/lib/format";
 import AdminActions from "./AdminActions";
+import TopicSwap from "./TopicSwap";
 
 // 운영자 통계. /ko/admin?key=STAR_ADMIN_KEY 로만 열림 (키 없거나 틀리면 404). 한국어 고정
 export const dynamic = "force-dynamic";
@@ -50,7 +51,7 @@ export default async function AdminPage({ params, searchParams }: P) {
     await requireLang(params);
     const { key } = await searchParams;
     if (!adminKeyOk(key)) notFound();
-    const st = await getAdminStats();
+    const [st, plan] = await Promise.all([getAdminStats(), getSwapPlan()]);
     const maxDay = Math.max(1, ...st.visitors.days.map((d) => d.n));
     const adminKey = key!;
     return (
@@ -107,13 +108,16 @@ export default async function AdminPage({ params, searchParams }: P) {
             {st.recent.length === 0 && <p className="mt-2 text-[12px] text-dim">아직 글이 없어요</p>}
             <ul className="mt-2 space-y-2">{st.recent.map((s) => <StoryRow key={s.id} s={s} adminKey={adminKey} />)}</ul>
 
+            <h2 className="mt-6 text-sm font-semibold text-ink">이번 달 주제 교체</h2>
+            <TopicSwap plan={plan} slots={TOPIC_SLOTS} adminKey={adminKey} />
+
             <h2 className="mt-6 text-sm font-semibold text-ink">제안된 주제 {st.proposals.length}</h2>
             {st.proposals.length === 0 && <p className="mt-2 text-[12px] text-dim">아직 없어요</p>}
             <ul className="mt-2 space-y-1 text-[12px]">
                 {st.proposals.map((p) => (
                     <li key={p.id} className="flex items-center justify-between rounded-xl bg-card px-3 py-2">
                         <span className="text-ink">{p.title} <span className="text-[10px] text-dim">{p.lang}</span></span>
-                        <span className="text-muted">공감 {p.empathy}{p.status === "promoted" ? " · 방 됨" : ""}</span>
+                        <span className="text-muted">공감 {p.empathy}{p.status === "promoted" ? " · 주제 됨" : ""}</span>
                     </li>
                 ))}
             </ul>

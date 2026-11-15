@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Heart, ArrowRight } from "lucide-react";
 import type { ProposalView } from "@/lib/proposals";
-import { PROPOSAL_MAX_LEN, PROPOSAL_THRESHOLD } from "@/lib/site";
+import { PROPOSAL_MAX_LEN } from "@/lib/site";
 import { useLang, useT } from "./I18nProvider";
 import { useToast } from "./Toast";
 import { api, langPath } from "@/lib/client";
@@ -14,16 +14,14 @@ export default function ProposalBoard() {
     const lang = useLang();
     const toast = useToast();
     const [list, setList] = useState<ProposalView[]>([]);
-    const [threshold, setThreshold] = useState(PROPOSAL_THRESHOLD);
     const [title, setTitle] = useState("");
     const [busy, setBusy] = useState(false);
 
     useEffect(() => {
         let alive = true;
-        api<{ proposals: ProposalView[]; threshold: number }>("/api/proposals").then((r) => {
+        api<{ proposals: ProposalView[] }>("/api/proposals").then((r) => {
             if (!alive || !r.ok) return;
             setList(r.proposals);
-            setThreshold(r.threshold);
         });
         return () => {
             alive = false;
@@ -67,7 +65,9 @@ export default function ProposalBoard() {
             {list.length === 0 && <p className="py-8 text-center text-sm text-dim">{t("propose_empty")}</p>}
             <ul className="grid gap-2">
                 {list.map((p) => {
-                    const pct = Math.min(100, Math.round((p.empathyCount / threshold) * 100));
+                    // 막대는 지금 1위 제안 대비 (매달 1위가 새 주제가 됨)
+                    const top = Math.max(1, ...list.filter((x) => x.status === "open").map((x) => x.empathyCount));
+                    const pct = p.status === "open" ? Math.min(100, Math.round((p.empathyCount / top) * 100)) : 100;
                     return (
                         <li key={p.id} className="glass relative overflow-hidden rounded-2xl px-4 py-3">
                             <div className="absolute inset-y-0 left-0 bg-star/10" style={{ width: `${pct}%` }} />
@@ -80,7 +80,7 @@ export default function ProposalBoard() {
                                                 {t("propose_promoted")} <ArrowRight size={12} />
                                             </Link>
                                         ) : (
-                                            t("propose_progress", { n: p.empathyCount, max: threshold })
+                                            t("propose_progress", { n: p.empathyCount })
                                         )}
                                     </p>
                                 </div>

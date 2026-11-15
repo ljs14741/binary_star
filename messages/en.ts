@@ -149,15 +149,16 @@ export const en: { [K in keyof typeof ko]: string } = {
     featured_result_link: "See results",
 
     propose_title: "Suggest a new topic",
-    propose_sub: "A topic becomes a room at {n} reactions",
+    propose_sub: "Each month, the most-loved suggestion becomes a new topic",
     propose_placeholder: "e.g. To my friend in the army",
     propose_submit: "Suggest",
     propose_list_title: "Suggested topics",
     propose_empty: "No suggestions yet",
-    propose_promoted: "Now a room",
+    propose_promoted: "Now a topic",
     propose_err_limit: "That's all the suggestions for today",
     propose_err_dup: "That topic was already suggested",
-    propose_progress: "{n} / {max}",
+    propose_progress: "{n} reactions",
+    room_closed: "A past topic. You can read and react, but not write new stories",
 
     nf_title: "Not found",
     nf_body: "The address is wrong or the story was taken down",
@@ -172,7 +173,7 @@ export const en: { [K in keyof typeof ko]: string } = {
 
     about_title: "About",
     about_body:
-        "{site} is a place to read strangers' stories in topic rooms, feel for them, and leave your own.\n\nShort or long, both are fine. There is no sign-up. Your story is translated automatically so people in other countries can read and feel it, and the cities it came from light up on a night globe.\n\nSend a friend a “feel this” link: they read your story first, react, and can leave their own.\n\nAnyone can suggest a topic. At {threshold} reactions it becomes a room.",
+        "{site} is a place to read strangers' stories in topic rooms, feel for them, and leave your own.\n\nShort or long, both are fine. There is no sign-up. Your story is translated automatically so people in other countries can read and feel it, and the cities it came from light up on a night globe.\n\nSend a friend a “feel this” link: they read your story first, react, and can leave their own.\n\nThere are 12 topics, like the 12 constellations. Anyone can suggest one, and each month the most-loved suggestion replaces the quietest topic.",
     privacy_title: "Privacy Policy",
     privacy_body:
         "1. There is no sign-up, so we don't collect names, emails or phone numbers.\n\n2. When you post, a random token is stored in your browser and only its hash is stored on the server. The token is part of your “my card” link, so anyone with the link can see your card.\n\n3. To prevent duplicate reactions we store a hash of a random cookie value mixed with your IP. The raw IP is never stored.\n\n4. To light up the globe we estimate country and city from your IP and store only the country code and city name. Location data by DB-IP (CC BY 4.0).\n\n5. Phone numbers, emails, ID numbers and bank account patterns in stories are masked before publishing.\n\n6. We may use Google Analytics for traffic statistics and Google AdSense to cover costs, under their respective cookie policies.\n\n7. To delete a story, contact the operator with your “my card” link.",
@@ -266,7 +267,7 @@ export const en: { [K in keyof typeof ko]: string } = {
     // 번역(AI 키) 꺼졌을 때 문구 · 오류 페이지
     anon_notice_local: "Anonymous · no sign-up",
     after_public_local: "It's public",
-    about_body_local: "{site} is a place to read strangers' stories in topic rooms, feel for them, and leave your own.\n\nShort or long, both are fine. There is no sign-up. The cities your reactions came from light up on a night globe.\n\nSend a friend a “feel this” link: they read your story first, react, and can leave their own.\n\nAnyone can suggest a topic. At {threshold} reactions it becomes a room.",
+    about_body_local: "{site} is a place to read strangers' stories in topic rooms, feel for them, and leave your own.\n\nShort or long, both are fine. There is no sign-up. The cities your reactions came from light up on a night globe.\n\nSend a friend a “feel this” link: they read your story first, react, and can leave their own.\n\nThere are 12 topics, like the 12 constellations. Anyone can suggest one, and each month the most-loved suggestion replaces the quietest topic.",
     error_title: "Something went wrong",
     error_sub: "If retrying doesn't help, please come back in a bit",
     error_retry: "Try again",

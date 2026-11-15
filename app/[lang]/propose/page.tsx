@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { requireLang, alternates } from "@/lib/page";
 import { t } from "@/lib/i18n";
-import { PROPOSAL_THRESHOLD } from "@/lib/site";
 import ProposalBoard from "@/components/ProposalBoard";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +16,7 @@ export default async function ProposePage({ params }: P) {
     return (
         <div className="px-4 pb-8 pt-3">
             <h1 className="text-xl font-semibold text-ink">{t(lang, "propose_title")}</h1>
-            <p className="mb-4 text-sm text-muted">{t(lang, "propose_sub", { n: PROPOSAL_THRESHOLD })}</p>
+            <p className="mb-4 text-sm text-muted">{t(lang, "propose_sub")}</p>
             <ProposalBoard />
         </div>
     );

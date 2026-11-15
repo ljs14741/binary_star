@@ -39,8 +39,9 @@ export default async function RoomPage({ params }: P) {
                 <p className="text-xs text-muted">
                     {room.description} · {t(lang, "room_story_count", { n: room.storyCount })}
                 </p>
+                {room.status !== "open" && <p className="mt-1.5 rounded-xl bg-card px-3 py-2 text-xs text-muted">{t(lang, "room_closed")}</p>}
             </div>
-            <StorySwiper roomSlug={slug} roomTitle={room.title} initial={feed.stories} initialHasMore={feed.hasMore} />
+            <StorySwiper roomSlug={slug} roomTitle={room.title} closed={room.status !== "open"} initial={feed.stories} initialHasMore={feed.hasMore} />
         </div>
     );
 }

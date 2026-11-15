@@ -1,11 +1,10 @@
 import { getCtx, err, json, readJson, sameOrigin } from "@/lib/api";
 import { createProposal, listProposals } from "@/lib/proposals";
-import { PROPOSAL_THRESHOLD } from "@/lib/site";
 import { rateLimit } from "@/lib/ratelimit";
 
 export async function GET() {
     const ctx = await getCtx();
-    return json({ ok: true, proposals: await listProposals(ctx.voterKey), threshold: PROPOSAL_THRESHOLD });
+    return json({ ok: true, proposals: await listProposals(ctx.voterKey) });
 }
 
 export async function POST(req: Request) {

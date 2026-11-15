@@ -9,9 +9,9 @@ import StoryCard from "./StoryCard";
 import { useLang, useT } from "./I18nProvider";
 import { addSeen, api, getSeen, langPath } from "@/lib/client";
 
-type Props = { roomSlug?: string; roomTitle?: string; firstId?: number; initial: StoryView[]; initialHasMore: boolean };
+type Props = { roomSlug?: string; roomTitle?: string; closed?: boolean; firstId?: number; initial: StoryView[]; initialHasMore: boolean };
 
-export default function StorySwiper({ roomSlug, roomTitle, firstId, initial, initialHasMore }: Props) {
+export default function StorySwiper({ roomSlug, roomTitle, closed, firstId, initial, initialHasMore }: Props) {
     const t = useT();
     const lang = useLang();
     const [stories, setStories] = useState<StoryView[]>(initial);
@@ -98,7 +98,7 @@ export default function StorySwiper({ roomSlug, roomTitle, firstId, initial, ini
                         ) : (
                             <>
                                 <p className="mb-5 text-muted">{t("feed_end")}</p>
-                                {roomSlug && (
+                                {roomSlug && !closed && (
                                     <Link href={langPath(lang, `/room/${roomSlug}/write`)} className="btn-star flex h-12 items-center gap-2 rounded-full px-6 font-semibold">
                                         <PenLine size={16} /> {t("room_write_cta")}
                                     </Link>
@@ -114,9 +114,11 @@ export default function StorySwiper({ roomSlug, roomTitle, firstId, initial, ini
                     <Link href={langPath(lang, `/room/${roomSlug}/top`)} className="glass pointer-events-auto flex h-11 items-center gap-1.5 rounded-full px-4 text-sm text-ink">
                         <Trophy size={15} className="text-star" /> {t("room_top")}
                     </Link>
-                    <Link href={langPath(lang, `/room/${roomSlug}/write`)} className="btn-star pointer-events-auto flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold">
-                        <PenLine size={15} /> {t("write_story")}
-                    </Link>
+                    {!closed && (
+                        <Link href={langPath(lang, `/room/${roomSlug}/write`)} className="btn-star pointer-events-auto flex h-11 items-center gap-2 rounded-full px-5 text-sm font-semibold">
+                            <PenLine size={15} /> {t("write_story")}
+                        </Link>
+                    )}
                 </div>
             )}
             {roomTitle && <span className="sr-only">{roomTitle}</span>}

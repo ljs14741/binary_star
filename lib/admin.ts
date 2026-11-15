@@ -4,6 +4,8 @@ import { prisma } from "./prisma";
 import { getPresence } from "./hill";
 import { kstDay, kstDayStart, lastDays } from "./kst";
 import { pickI18n } from "./rooms";
+import { memoClear } from "./cache";
+import { promoteProposal } from "./proposals";
 
 export function adminKeyOk(key: string | null | undefined): boolean {
     const want = process.env.STAR_ADMIN_KEY || "";
@@ -85,4 +87,63 @@ export async function adminStoryAction(id: number, action: AdminAction): Promise
     const { memoClear } = await import("./cache");
     memoClear();
     return true;
+}
+
+// ---------- 매달 주제 교체: 공감 1위 제안 ↔ 가장 조용한 주제 ----------
+export const TOPIC_SLOTS = 12; // 하늘 별자리 수 = 동시에 열린 주제 수
+const QUIET_WINDOW_DAYS = 30;
+
+export type SwapPlan = {
+    openRooms: number;
+    // 최근 30일 글·공감이 가장 적은 주제 (연 지 30일 안 된 주제는 한 달 유예)
+    quietest: { id: number; slug: string; title: string; stories: number; empathy: number } | null;
+    top: { id: number; title: string; empathy: number } | null;
+};
+
+export async function getSwapPlan(): Promise<SwapPlan> {
+    const since = new Date(Date.now() - QUIET_WINDOW_DAYS * 24 * 3600 * 1000);
+    const [rooms, top] = await Promise.all([
+        prisma.room.findMany({ where: { status: "open" }, include: { i18n: true }, orderBy: { created_at: "asc" } }),
+        prisma.room_proposal.findFirst({ where: { status: "open" }, orderBy: [{ empathy_count: "desc" }, { created_at: "asc" }] }),
+    ]);
+    const ids = rooms.map((r) => r.id);
+    const [st, em] = await Promise.all([
+        prisma.story.groupBy({ by: ["room_id"], where: { room_id: { in: ids }, status: "public", published_at: { gte: since } }, _count: { _all: true } }),
+        prisma.empathy.findMany({ where: { created_at: { gte: since }, story: { room_id: { in: ids } } }, select: { story: { select: { room_id: true } } } }),
+    ]);
+    const stN = new Map(st.map((r) => [r.room_id, r._count._all]));
+    const emN = new Map<number, number>();
+    for (const e of em) emN.set(e.story.room_id, (emN.get(e.story.room_id) ?? 0) + 1);
+    const settled = rooms.filter((r) => r.created_at < since);
+    const pool = settled.length ? settled : rooms;
+    let quietest: SwapPlan["quietest"] = null;
+    let best = Infinity;
+    for (const r of pool) {
+        const stories = stN.get(r.id) ?? 0;
+        const empathy = emN.get(r.id) ?? 0;
+        const score = stories * 3 + empathy; // 글 하나가 공감 셋 정도의 무게
+        if (score < best) {
+            best = score;
+            quietest = { id: r.id, slug: r.slug, title: pickI18n(r.i18n, "ko").title, stories, empathy };
+        }
+    }
+    return { openRooms: rooms.length, quietest, top: top ? { id: top.id, title: top.title, empathy: top.empathy_count } : null };
+}
+
+// 제안을 주제로 올림. closeRoomId 가 있으면 그 주제는 지난 주제로 내림(글은 남고 읽기만 됨)
+export async function swapTopic(proposalId: number, closeRoomId: number | null): Promise<{ ok: true; slug: string } | { ok: false; error: string }> {
+    const p = await prisma.room_proposal.findUnique({ where: { id: proposalId } });
+    if (!p || p.status !== "open") return { ok: false, error: "proposal" };
+    const open = await prisma.room.count({ where: { status: "open" } });
+    if (closeRoomId == null && open >= TOPIC_SLOTS) return { ok: false, error: "full" };
+    if (closeRoomId != null) {
+        const r = await prisma.room.findUnique({ where: { id: closeRoomId } });
+        if (!r || r.status !== "open") return { ok: false, error: "room" };
+        await prisma.room.update({ where: { id: closeRoomId }, data: { status: "closed" } });
+    }
+    const slug = await promoteProposal(proposalId);
+    memoClear("rooms:");
+    memoClear("hill:");
+    if (!slug) return { ok: false, error: "promote" };
+    return { ok: true, slug };
 }
