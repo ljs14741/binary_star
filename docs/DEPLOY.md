@@ -29,3 +29,4 @@
 - 확인: `sudo docker logs -f star-app`, https://star.binaryworld.kr
 - 카카오 공유: 카카오 개발자 콘솔 플랫폼(Web)에 `https://star.binaryworld.kr` 등록
 - 정식 오픈 전: `npm run db:clear-seed`(테스트 글 삭제), `ANTHROPIC_API_KEY` 를 compose 에 넣으면 AI 검수·번역 켜짐
+- 관리자 페이지: `https://star.binaryworld.kr/ko/admin?key=<STAR_ADMIN_KEY>` (키는 compose 환경변수 `STAR_ADMIN_KEY`, 로컬은 `.env.local`). 키 없으면 404. 방문자·글·공감·방별·최근 글 숨기기/내리기·신고·제안

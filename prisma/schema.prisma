@@ -135,3 +135,15 @@ model report {
 
   @@unique([story_id, voter_key])
 }
+
+// 하루 방문자(유니크). 관리자 통계용. voter_key = 쿠키 무작위값+IP 해시라 개인정보 아님
+model visit_day {
+  id         Int      @id @default(autoincrement())
+  day        String   @db.VarChar(10) // KST yyyy-mm-dd
+  voter_key  String   @db.VarChar(64)
+  lang       String   @db.VarChar(8)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+
+  @@unique([day, voter_key])
+  @@index([day])
+}

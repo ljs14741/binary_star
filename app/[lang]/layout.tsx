@@ -4,6 +4,7 @@ import { isLang, LANGS, type Lang } from "@/lib/i18n/config";
 import { getDict, t } from "@/lib/i18n";
 import { getBaseUrl, siteName } from "@/lib/site";
 import { I18nProvider } from "@/components/I18nProvider";
+import VisitBeacon from "@/components/VisitBeacon";
 import { ToastProvider } from "@/components/Toast";
 import { DialogProvider } from "@/components/Dialog";
 import SiteHeader from "@/components/SiteHeader";
@@ -47,6 +48,7 @@ export default async function LangLayout({ children, params }: { children: React
             <ToastProvider>
                 <DialogProvider>
                     <div className="phone relative flex min-h-dvh flex-col">
+                        <VisitBeacon />
                         <SiteHeader />
                         <main className="flex-1">{children}</main>
                         <SiteFooter />
