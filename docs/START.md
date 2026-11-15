@@ -4,46 +4,34 @@
 가입 없이 모르는 사람의 이야기를 읽고 공감하고 내 이야기를 남기는 곳. 4개 언어(ko·en·ja·zh-TW). 첫 화면 = 실시간 3D "밤의 언덕"(바다 위 섬, 하늘에 황도 12궁, 같이 앉은 별 요정). Next.js 16 + TS + Tailwind + Prisma(MySQL `star`) + three.js + ws.
 `/home/binary/workspace/binary_star`, 원격 `ljs14741/binary_star` master. **push → Jenkins `binaryworld-star` 자동 배포** → https://star.binaryworld.kr (컨테이너 `star-app`). 커밋·푸시는 Claude 가 `-c user.name=binary -c user.email=jslee@nemosys.kr` 로. 연달아 푸시하면 한 빌드가 실패할 수 있음(다음 빌드가 정리).
 
-## 지금 상태 (2026-11-15 저녁, 13차까지 배포. 친구 테스트 직전)
-- 테스트 39 · lint · build 통과. 개발 서버 `npm run dev`(localhost:3100). 운영은 **클라우드플레어 경유**(무료, 집 IP 숨김, 정적 캐시). 상세 `docs/DEPLOY.md`
-- 결정: **Claude API 키 없이 운영** → 검수는 기본 필터+신고+관리자 페이지, 번역 없음 → 글은 언어 상관없이 다 보임(내 언어 글 위주, 다른 언어는 원문+"○○로 쓴 이야기" 표시, 브라우저 번역에 맡김). 화면 언어는 사이트 문구만. 번역 약속 문구는 `aiEnabled()` 로 분기돼 안 나옴
-- 관리자 페이지 `/admin`: 처음 한 번 키 입력 → 90일 쿠키(`star_admin`, 키 해시). 키는 compose `STAR_ADMIN_KEY`·`.env.local`. 예전 `?key=` 주소도 됨: 접속·방문자·글·공감·방별·최근 글 숨기기/내리기·신고·제안
-- 광고 끔(2026-11-15, 분위기). 대신 언덕 버튼 줄에 후원(카카오페이, game 과 같은 링크·QR, 한국어 화면만). 후원 내역은 관리자 페이지에서 직접 입력 → 후원 창에 이름 가려 공개(`donation` 표)
-- 화면엔 나라만(도시 없음). 지구본은 나라마다 불빛 하나 + 물결. 하늘 이름표는 주제가 주, 별자리 이름은 작게
-- DB: 시드·테스트 글 전부 삭제됨. 사용자가 방마다 진짜 글 3편(이번 달 주제 5편) 쓰는 중
-- 7~13차 상세는 `docs/round7-13.md`, 5·6차 `docs/round5-6.md`, 3·4차 `docs/round4-todo.md`
-
-## 주제 운영 (2026-11-15 결정)
-- 주제는 하늘 별자리처럼 최대 12개(`TOPIC_SLOTS`). 11개 열림, 12번째는 첫 사용자 제안 몫(정의는 `scripts/seed.ts`, 별자리 매칭은 `constellations.ts` BY_SLUG). 제안은 공감이 많아도 자동으로 방이 안 됨
-- 매달 관리자 페이지 "이번 달 주제 교체" 버튼: 공감 1위 제안 ↔ 최근 30일 가장 조용한 주제(연 지 30일 안 된 건 유예). 내려간 주제는 `status=closed` 로 글은 남고 읽기만
-
-## 소원 부두 (2026-11-15)
-- 모닥불 왼쪽 앞, 달 쪽으로 뻗은 나무 부두(자리·길이는 `protocol.ts` 의 `WISH_DOCK`, 서버 `clampHill` 도 부두 위는 언덕 범위 밖이어도 허용). 버튼·부두 누르면 카메라가 바로 달(MOON_AZ)로 돌고 요정이 입구→끝까지 총총 걸어감(`groundY` 로 판자 높이). 끝에 서면 소원 창. 빌면 풍등이 달 쪽으로 오름(같은 언덕에 `lantern` 메시지)
-- 소원은 `wish` 표, 익명·한 줄 60자·하루 3번(KST 날짜 기준). 하늘에는 **빈 시각부터 24시간**(`WISH_SKY_HOURS`, `listSky`) + 관리자가 **고정(`pinned`)** 한 소원은 계속(고정이 맨 앞). 하늘엔 20개, 전체는 "모두 보기" 목록. 이루어지길(`wish_cheer`, 풍등이 잠깐 환해짐)·신고 3곳이면 숨김(`wish_report`). 위기 낱말은 private + 상담 안내. 관리자 페이지에 최근 60개(숨김·고정·지우기). 기록은 지우지 않음(나중에 "이달의 소원" 벽 가능)
-- 부두 위에 서면 카메라가 `DOCK_CAM_FWD` 만큼 다가가고, 이름표는 가운데 이야기 카드와 겹치면 숨음. 풍등 소리 `lantern`/`lanternFar`. 첫 방문 안내 5장(4장째가 부두) + 안내 뒤 "끌어서 하늘을 돌려 보세요" 힌트(`star_drag_seen`)
-- 캔버스는 `touchend` 에 preventDefault: 안 하면 터치 뒤 따라오는 click 이 방금 열린 창 배경에 떨어져 바로 닫힘(풍등 창이 "반응 없음"처럼 보이던 원인). BottomSheet 도 연 뒤 400ms 는 배경 눌림 무시
-
-## 주제 판 (2026-11-15)
-- 언덕 위 제목·점 12개를 누르면 아래 창에 12칸이 2열로 보임(주제·별자리·이야기 수·연필=바로 글쓰기, 빈 칸은 "주제 제안하기"). 누르면 `goTo(i)`. 이야기 수는 `SkyRoom.count`(listRooms 의 storyCount)
-- 첫 화면 아래 주제 방 목록(RoomList)은 뺌. 검색 엔진·WebGL 없는 기기용으로 h1 + 방 이름 글자 링크만 남김(`#rooms`)
-- 글 쓴 뒤 "하늘에서 내 별 보기" → `/?born=ID&room=slug` → 언덕이 `celebrateStar(id)`(그 별자리로 돌고 별이 태어나듯 커짐 + 강조 카드) 또는 하늘에 없으면 별자리로만 돎. 풍등 창엔 "다음 소원 →"
+## 지금 상태 (2026-11-15 밤, 14차까지 배포. 친구 테스트 중)
+- 테스트 54 · lint · build 통과. 개발 서버 `npm run dev`(localhost:3100). 운영은 **클라우드플레어 경유**. 상세 `docs/DEPLOY.md`
+- 결정: **Claude API 키 없이 운영**(기본 필터+신고+관리자). 글은 언어 상관없이 다 보임(다른 언어는 "○○로 쓴 이야기" 표시, 브라우저 번역). 화면 언어는 문구만
+- 관리자 `/admin`: 처음 한 번 키(compose `STAR_ADMIN_KEY`) → 90일 쿠키. 글 숨기기·신고·제안·이번 달 주제 교체·후원 입력·소원(숨김/고정/지우기)
+- 광고 끔. 후원은 카카오페이 버튼(한국어만) + 후원해 주신 분들 목록(`donation`)
+- 주제 12칸(`TOPIC_SLOTS`): 11개 열림, 12번째는 첫 사용자 제안 몫. 매달 관리자 버튼으로 공감 1위 제안 ↔ 가장 조용한 주제 교체. 제안은 자동 승격 안 됨
+- 언덕: 별명(자동 생성·변경, 요정 머리 위), 감정 표현 6개 + 요정 누르면 하트, 큰 모닥불, 혼자면 그림자 요정, 첫 안내 5장 + 하늘 끌기 힌트, 제목 누르면 **주제 판**(12칸·연필=바로 글쓰기). 첫 화면 아래 방 목록은 뺌(글자 링크만)
+- **소원 부두**: 달 버튼/부두 누르면 요정이 부두 끝까지 가서 풍등을 띄움. 하늘엔 빈 시각부터 24시간 + 관리자 고정(사용자 소원 3개 고정, 삭제 금지), 풍등 20개까지 그림·나머지는 목록. 이루어지길·신고·위기 낱말 안내
+- 글 쓴 뒤 "하늘에서 내 별 보기"로 돌아오면 그 별자리로 돌고 내 별이 커짐
+- 14차 상세 `docs/round14.md`, 7~13차 `docs/round7-13.md`, 5·6차 `docs/round5-6.md`
 
 ## 다음에 할 일
-1. 친구 테스트 피드백 반영 (폰 실물: 요정·끌어 걷기·손 흔들기·인스타 공유·fps·지구본 물결 느낌)
-2. 하늘 12칸 대비: "이번 달 주제"를 달마다 돌리고 지난 방은 보관함(읽기만, 하늘에서 내림). 13번째 방은 지금 하늘에 못 뜸(`assignRooms`)
-3. 백업 cron: 사용자가 `sudo usermod -aG docker binary` 후 `scripts/backup.sh` 를 cron 에
-4. 블로그 글(naver-blog-post 스킬) · 애드센스 콘솔에서 star 서브도메인 확인
-5. 나중에 AI 키 켜면 `ANTHROPIC_API_KEY` 만 compose 에 (검수·번역·문구 자동 복귀)
+1. 사용자 몫: 카카오 새 앱(`a0f0937c…`) 웹 도메인 등록 · `sudo usermod -aG docker binary` 뒤 `scripts/backup.sh` cron · 서치콘솔 사이트맵 · 업타임 모니터 · 안드로이드 실기기 소리·풍등 확인
+2. 친구 피드백 반영. 후보: 소원 없는 밤 씨앗 풍등, 신고된 소원만 보기 필터, 저사양이면 풍등 12개로, 풍등 20개 넘으면 "+N" 표시
+3. 블로그 글(naver-blog-post 스킬). 나중에 AI 키 켜면 `ANTHROPIC_API_KEY` 만 compose 에
 
 ## 확인 방법
 - 운영 확인은 클라우드플레어 IP 로: `ip=$(dig +short A star.binaryworld.kr @peter.ns.cloudflare.com | head -1); curl --resolve star.binaryworld.kr:443:$ip https://star.binaryworld.kr/ko` (이 PC 에선 공인 IP 헤어핀 안 됨. 시스템 DNS 캐시가 옛 IP 를 줄 수 있음)
 - 헤드리스 캡처: playwright-core(`~/.claude/skills/web-promo-video/tools/node_modules`) + `~/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome` + `--use-angle=swiftshader`, `waitUntil: "load"`(networkidle 은 dev 에서 타임아웃). 스크립트·스크린샷은 `.tmp/`(git 밖). 개발 디버그 `window.__hill.*`
 - 브라우저 B 는 시크릿 + `/api/dev/geo?set=JP,Tokyo,35.7,139.7`. 의식 강제 `/api/dev/daily`. 시드 `npm run db:seed`(출시 전 `db:clear-seed`)
-- 임시 글은 `.tmp/*.ts` 에서 `../lib/prisma` 로 만들고 끝나면 꼭 삭제 (story 에 lat/lng 없음, empathy 에 있음)
+- 임시 글·소원은 `.tmp/*.ts`(첫 줄 `import "../lib/load-env"`, async main, `../lib/prisma`)로 만들고 끝나면 꼭 삭제. 사용자 소원(id 23·24·36)은 건드리지 않기
+- 운영 배포 확인: push 뒤 `ps -o lstart= -p $(ps -eo pid,args | grep "[s]h -c NODE_ENV=production" | awk '{print $1}')` 가 커밋 시각보다 뒤면 새 코드. 보통 2~3분
 
 ## 함정 (꼭 지킬 것)
 - `server.ts` 는 `import "./lib/load-env"` 가 **첫 import**
-- Next 16 커스텀 서버: decoy httpServer + `upgradeHandler` 구조 바꾸지 말 것. 서버 코드·Prisma 스키마 바꾸면 dev 서버 재시작(`ps -eo pid,user,args` 로 binary 소유 `tsx server.ts` 만 kill. `pkill -f` 는 자기 셸까지 죽임)
+- Next 16 커스텀 서버: decoy httpServer + `upgradeHandler` 구조 바꾸지 말 것. 서버 코드·Prisma 스키마 바꾸면 dev 서버 재시작: `ps -eo pid,user,args | grep "[n]ode .*tsx server.ts"` 로 **binary 소유 node 만** kill. `pkill -f`·`pgrep -f "tsx server.ts"` 는 자기 셸까지 잡음(실제로 한 번 죽음). root 소유는 운영 컨테이너
+- 폰에서 캔버스를 누른 뒤 창이 바로 닫히면 유령 click(`round14.md`). 헤드리스 검증은 `touchscreen.tap` 으로
+- Prisma 스키마 바꾸면 migration SQL 을 손으로 쓰고 `npx prisma migrate deploy && npx prisma generate`(dev DB = 운영 DB, 추가만 할 것)
 - React lint: 렌더 중 `useRef.current` 읽기·컴포넌트 정의 금지
 - 하늘 위 요소는 폰 헤더에 가림 → 고도 48도 아래. 세로 화면은 카메라가 3.2 앞
 - 카메라는 모닥불 둘레를 돎(`ORBIT_R`). 하늘 물체는 `this.sky` 그룹에 넣어야 카메라를 따라감(별 화면좌표 계산 때 `sky.position` 더함). 자리 배정도 불 둘레 원형
