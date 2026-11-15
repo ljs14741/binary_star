@@ -35,7 +35,7 @@ export async function listTonight(voterKey?: string): Promise<{ count: number; i
     const base = await memo(`wishes:tonight:${day}`, 15_000, async () => {
         const [count, rows] = await Promise.all([
             prisma.wish.count({ where: { kst_day: day, status: { in: ["public", "private"] } } }),
-            prisma.wish.findMany({ where: { kst_day: day, status: "public" }, orderBy: { id: "desc" }, take: 30, select: { id: true, body: true, cheer_count: true, voter_key: true } }),
+            prisma.wish.findMany({ where: { kst_day: day, status: "public" }, orderBy: { id: "desc" }, take: 100, select: { id: true, body: true, cheer_count: true, voter_key: true } }),
         ]);
         return { count, rows };
     });

@@ -2,9 +2,17 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function BottomSheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title?: string; children: React.ReactNode }) {
+    // 연 직후 들어오는 배경 클릭은 무시 (폰에서 터치 뒤 따라오는 click 이 배경에 떨어져 바로 닫히는 것 방지)
+    const openedAt = useRef(0);
+    useEffect(() => {
+        if (open) openedAt.current = performance.now();
+    }, [open]);
+    const onBackdrop = () => {
+        if (performance.now() - openedAt.current > 400) onClose();
+    };
     useEffect(() => {
         if (!open) return;
         const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
@@ -15,7 +23,7 @@ export default function BottomSheet({ open, onClose, title, children }: { open: 
         <AnimatePresence>
             {open && (
                 <>
-                    <motion.div className="fixed inset-0 z-50 bg-black/55" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} />
+                    <motion.div className="fixed inset-0 z-50 bg-black/55" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onBackdrop} />
                     <motion.div
                         role="dialog"
                         aria-modal

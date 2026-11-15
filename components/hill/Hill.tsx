@@ -21,7 +21,7 @@ import { useHillSocket } from "./useHillSocket";
 import ShareSheet from "@/components/ShareSheet";
 import DonorWall from "@/components/DonorWall";
 import CrisisNotice from "@/components/CrisisNotice";
-import { WishCompose, WishView, type WishItem } from "./WishDialogs";
+import { WishCompose, WishList, WishView, type WishItem } from "./WishDialogs";
 import { SISTER_SITES, siteName, sisterUrl } from "@/lib/site";
 
 type Props = { initialTotal: number };
@@ -37,7 +37,7 @@ function useSound() {
     const pref = useSyncExternalStore(
         () => () => {},
         () => soundPref(),
-        () => false
+        () => false,
     );
     const [override, setOverride] = useState<boolean | null>(null);
     const on = override ?? pref;
@@ -84,7 +84,7 @@ export default function Hill({ initialTotal }: Props) {
     const webgl = useSyncExternalStore(
         () => () => {},
         () => hasWebGL(),
-        () => null
+        () => null,
     );
     if (webgl === null) return <section className="hill-wrap" aria-busy />;
     if (!webgl) return <HillFallback total={initialTotal} />;
@@ -108,6 +108,7 @@ function Hill3D({ initialTotal }: Props) {
     const [wishOpen, setWishOpen] = useState(false);
     const [wishTapped, setWishTapped] = useState<number | null>(null);
     const [wishCrisis, setWishCrisis] = useState(false);
+    const [wishListOpen, setWishListOpen] = useState(false);
     const [wishes, setWishes] = useState<{ count: number; items: WishItem[] }>({ count: 0, items: [] });
     const loadWishes = useCallback(() => {
         void api<{ count: number; items: WishItem[] }>("/api/wishes").then((r) => {
@@ -140,7 +141,7 @@ function Hill3D({ initialTotal }: Props) {
                 return true;
             }
         },
-        () => false
+        () => false,
     );
     const [introStep, setIntroStep] = useState(0);
     const [introDone, setIntroDoneRaw] = useState(false);
@@ -158,6 +159,23 @@ function Hill3D({ initialTotal }: Props) {
         flashTimer.current = setTimeout(() => setToastLine(null), 2600);
     }, []);
     const shownTotal = status === "open" ? total : initialTotal;
+    // 빌어 주기: 바로 채워 보여 주고(풍등도 환해짐) 서버에 보냄. 실패하면 되돌림
+    const cheerWish = useCallback(
+        async (id: number) => {
+            const before = wishes.items.find((w) => w.id === id);
+            if (!before || before.cheered || before.mine) return;
+            setWishes((s) => ({ ...s, items: s.items.map((w) => (w.id === id ? { ...w, cheers: w.cheers + 1, cheered: true } : w)) }));
+            sceneRef.current?.flareWish(id);
+            try {
+                navigator.vibrate?.(14);
+            } catch {}
+            flash(t("wish_cheered"));
+            const r = await api<{ cheers: number }>(`/api/wishes/${id}/cheer`, { method: "POST" });
+            if (r.ok) setWishes((s) => ({ ...s, items: s.items.map((w) => (w.id === id ? { ...w, cheers: r.cheers, cheered: true } : w)) }));
+            else if (r.error !== "dup") setWishes((s) => ({ ...s, items: s.items.map((w) => (w.id === id ? { ...w, cheers: before.cheers, cheered: false } : w)) }));
+        },
+        [wishes.items, flash, t],
+    );
     // 오늘 밤 소원들을 하늘 풍등으로
     useEffect(() => {
         sceneRef.current?.setSkyWishes(wishes.items);
@@ -175,7 +193,7 @@ function Hill3D({ initialTotal }: Props) {
                 setStoryOpen(true);
             }
         },
-        [lang]
+        [lang],
     );
 
     const closeIntro = () => {
@@ -214,6 +232,7 @@ function Hill3D({ initialTotal }: Props) {
                 onGesture: (g) => bridge.send({ t: "gesture", g }),
                 onGift: (to) => bridge.send({ t: "gift", to }),
                 wishLabel: t("wish_label"),
+                onWishGo: () => flash(t("wish_going")),
                 onWishArrive: () => setWishOpen(true),
                 onWishTap: (id) => setWishTapped(id),
             });
@@ -255,7 +274,10 @@ function Hill3D({ initialTotal }: Props) {
             const you = bridge.members.get(bridge.meId);
             if (you) {
                 scene.setMe(you.id);
-                scene.syncMembers(you, [...bridge.members.values()].filter((m) => m.id !== you.id));
+                scene.syncMembers(
+                    you,
+                    [...bridge.members.values()].filter((m) => m.id !== you.id),
+                );
             }
         }
         return () => {
@@ -325,7 +347,14 @@ function Hill3D({ initialTotal }: Props) {
                     </button>
                     <div className="min-w-0 text-center">
                         <AnimatePresence mode="wait">
-                            <motion.h2 key={slot ? index : "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }} className={`truncate text-lg leading-tight drop-shadow ${room ? "font-semibold text-ink" : "font-medium text-muted"}`}>
+                            <motion.h2
+                                key={slot ? index : "none"}
+                                initial={{ opacity: 0, y: 4 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                exit={{ opacity: 0, y: -4 }}
+                                transition={{ duration: 0.25 }}
+                                className={`truncate text-lg leading-tight drop-shadow ${room ? "font-semibold text-ink" : "font-medium text-muted"}`}
+                            >
                                 {slot ? (room ? room.title : t("hill_empty_zodiac")) : t("hill_title")}
                             </motion.h2>
                         </AnimatePresence>
@@ -343,7 +372,9 @@ function Hill3D({ initialTotal }: Props) {
                             onClick={() => sceneRef.current?.goTo(i)}
                             className="pointer-events-auto flex h-5 w-5 items-center justify-center"
                         >
-                            <span className={`block rounded-full transition-all ${i === index ? "h-2.5 w-2.5 bg-star shadow-[0_0_6px_rgba(255,216,107,0.8)]" : s.room ? "h-1.5 w-1.5 bg-ink/80" : "h-1.5 w-1.5 bg-white/25"}`} />
+                            <span
+                                className={`block rounded-full transition-all ${i === index ? "h-2.5 w-2.5 bg-star shadow-[0_0_6px_rgba(255,216,107,0.8)]" : s.room ? "h-1.5 w-1.5 bg-ink/80" : "h-1.5 w-1.5 bg-white/25"}`}
+                            />
                         </button>
                     ))}
                 </div>
@@ -370,16 +401,30 @@ function Hill3D({ initialTotal }: Props) {
                         {soundOn ? <Volume2 size={16} className={soundArmed ? "text-star-soft" : ""} /> : <VolumeX size={16} />}
                     </button>
                     {/* 버튼 왼쪽에 띄움: 첫 터치에 사라질 때 아래 버튼들이 밀려 올라가 터치가 빗나가지 않게 */}
-                    {soundOn && !soundArmed && intro === null && <p className="absolute right-full top-1/2 mr-1.5 -translate-y-1/2 whitespace-nowrap rounded-full bg-night/60 px-2 py-0.5 text-[10px] text-dim">{t("hill_sound_hint")}</p>}
+                    {soundOn && !soundArmed && intro === null && (
+                        <p className="absolute right-full top-1/2 mr-1.5 -translate-y-1/2 whitespace-nowrap rounded-full bg-night/60 px-2 py-0.5 text-[10px] text-dim">{t("hill_sound_hint")}</p>
+                    )}
                 </div>
                 {/* 감정 표현: 누르면 왼쪽으로 6개가 펼쳐짐 */}
                 <div className="relative">
-                    <button onClick={() => setEmoteOpen((v) => !v)} aria-label={t("emote_title")} title={t("emote_title")} aria-expanded={emoteOpen} className={`glass pointer-events-auto rounded-full p-2 active:scale-95 ${emoteOpen ? "text-star-soft" : "text-muted"}`} disabled={status !== "open"}>
+                    <button
+                        onClick={() => setEmoteOpen((v) => !v)}
+                        aria-label={t("emote_title")}
+                        title={t("emote_title")}
+                        aria-expanded={emoteOpen}
+                        className={`glass pointer-events-auto rounded-full p-2 active:scale-95 ${emoteOpen ? "text-star-soft" : "text-muted"}`}
+                        disabled={status !== "open"}
+                    >
                         <Smile size={16} />
                     </button>
                     <AnimatePresence>
                         {emoteOpen && (
-                            <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} className="glass pointer-events-auto absolute right-full top-1/2 mr-2 flex -translate-y-1/2 gap-0.5 rounded-full px-1.5 py-1">
+                            <motion.div
+                                initial={{ opacity: 0, x: 8 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 8 }}
+                                className="glass pointer-events-auto absolute right-full top-1/2 mr-2 flex -translate-y-1/2 gap-0.5 rounded-full px-1.5 py-1"
+                            >
                                 {EMOTES.map((g) => (
                                     <button
                                         key={g}
@@ -399,7 +444,12 @@ function Hill3D({ initialTotal }: Props) {
                     </AnimatePresence>
                 </div>
                 {/* 소원 부두: 누르면 내 요정이 부두로 걸어가 달을 보고 소원 창이 열림 */}
-                <button onClick={() => (sceneRef.current ? sceneRef.current.goWish() : setWishOpen(true))} aria-label={t("wish_button")} title={t("wish_button")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
+                <button
+                    onClick={() => (sceneRef.current ? sceneRef.current.goWish() : setWishOpen(true))}
+                    aria-label={t("wish_button")}
+                    title={t("wish_button")}
+                    className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95"
+                >
                     <MoonStar size={16} />
                 </button>
                 {/* 친구 부르기: 사이트 첫 화면 링크 공유 */}
@@ -436,6 +486,10 @@ function Hill3D({ initialTotal }: Props) {
                 open={wishOpen}
                 count={wishes.count}
                 onClose={() => setWishOpen(false)}
+                onOpenList={() => {
+                    setWishOpen(false);
+                    setWishListOpen(true);
+                }}
                 onSent={(crisis) => {
                     setWishOpen(false);
                     if (bridge.meId != null) sceneRef.current?.launchLantern(bridge.meId);
@@ -448,8 +502,13 @@ function Hill3D({ initialTotal }: Props) {
             <WishView
                 wish={wishes.items.find((w) => w.id === wishTapped) ?? null}
                 onClose={() => setWishTapped(null)}
-                onCheered={(id, cheers) => setWishes((s) => ({ ...s, items: s.items.map((w) => (w.id === id ? { ...w, cheers, cheered: true } : w)) }))}
+                onCheer={cheerWish}
+                onOpenList={() => {
+                    setWishTapped(null);
+                    setWishListOpen(true);
+                }}
             />
+            <WishList open={wishListOpen} items={wishes.items} onClose={() => setWishListOpen(false)} onCheer={cheerWish} />
             <BottomSheet open={wishCrisis} onClose={() => setWishCrisis(false)} title={t("wish_title")}>
                 <CrisisNotice />
             </BottomSheet>
@@ -485,7 +544,14 @@ function Hill3D({ initialTotal }: Props) {
             <div className="pointer-events-none absolute inset-x-0 flex justify-center px-5 portrait:top-[var(--hill-horizon,66%)] portrait:-translate-y-[calc(100%+8px)] landscape:top-[60%]">
                 <AnimatePresence mode="wait">
                     {slot && !room && !highlight && (
-                        <motion.div key={`nozodiac-${index}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.45 }} className="glass pointer-events-auto max-w-[400px] rounded-2xl px-4 py-3 text-center">
+                        <motion.div
+                            key={`nozodiac-${index}`}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.45 }}
+                            className="glass pointer-events-auto max-w-[400px] rounded-2xl px-4 py-3 text-center"
+                        >
                             <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink">{t("hill_empty")}</p>
                             <Link href={langPath(lang, "/propose")} className="mt-2 inline-block text-[12px] text-star-soft underline-offset-4 hover:underline">
                                 {t("hill_propose")} →
@@ -493,7 +559,14 @@ function Hill3D({ initialTotal }: Props) {
                         </motion.div>
                     )}
                     {room && room.stars.length === 0 && !highlight && (
-                        <motion.div key={`empty-${room.slug}`} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.45 }} className="glass pointer-events-auto max-w-[400px] rounded-2xl px-4 py-3 text-center">
+                        <motion.div
+                            key={`empty-${room.slug}`}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.45 }}
+                            className="glass pointer-events-auto max-w-[400px] rounded-2xl px-4 py-3 text-center"
+                        >
                             <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink">{t("hill_empty_room")}</p>
                         </motion.div>
                     )}
@@ -519,7 +592,10 @@ function Hill3D({ initialTotal }: Props) {
 
             {/* 아래: 나도 한마디 */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-1.5 px-4 pb-2.5 landscape:gap-2 landscape:pb-4">
-                <Link href={langPath(lang, room ? `/room/${room.slug}/write` : rooms[0] ? `/room/${rooms[0].slug}/write` : "")} className="btn-star pointer-events-auto flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold">
+                <Link
+                    href={langPath(lang, room ? `/room/${room.slug}/write` : rooms[0] ? `/room/${rooms[0].slug}/write` : "")}
+                    className="btn-star pointer-events-auto flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold"
+                >
                     <PenLine size={15} /> {t("hill_write")}
                 </Link>
                 {/* 아래에 주제 방이 더 있다는 안내 (폰에서도 보이게) */}

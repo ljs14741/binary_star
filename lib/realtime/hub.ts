@@ -1,5 +1,23 @@
 // 언덕 실시간 허브. Next 에 의존하지 않음 (나중에 따로 띄울 수 있게). 소켓은 send 함수만 받음
-import { DAILY_WINDOW_MS, FIRE_KEEP_OUT, FIRE_POS, GESTURES, HILL_CAP, HILL_HALF_D, HILL_HALF_W, MIN_SEAT_DIST, TICK_MS, type ClientMsg, type DailyEvent, type Gesture, type MemberPublic, type Pose, type ServerMsg, type StarEvent } from "./protocol";
+import {
+    clampHill,
+    DAILY_WINDOW_MS,
+    FIRE_KEEP_OUT,
+    FIRE_POS,
+    GESTURES,
+    HILL_CAP,
+    HILL_HALF_D,
+    HILL_HALF_W,
+    MIN_SEAT_DIST,
+    TICK_MS,
+    type ClientMsg,
+    type DailyEvent,
+    type Gesture,
+    type MemberPublic,
+    type Pose,
+    type ServerMsg,
+    type StarEvent,
+} from "./protocol";
 import { checkNickname } from "../nickname";
 
 export type Socket = { send: (data: string) => void; close?: () => void };
@@ -94,8 +112,9 @@ export class Hub {
                 if (typeof msg.x !== "number" || typeof msg.z !== "number" || !Number.isFinite(msg.x) || !Number.isFinite(msg.z)) return;
                 if (now - member.lastMove < MOVE_MIN_INTERVAL) return;
                 member.lastMove = now;
-                member.x = clamp(msg.x, -HILL_HALF_W, HILL_HALF_W);
-                member.z = clamp(msg.z, -HILL_HALF_D, HILL_HALF_D);
+                const c = clampHill(msg.x, msg.z);
+                member.x = c.x;
+                member.z = c.z;
                 member.pose = "stand";
                 member.dirty = true;
                 break;
@@ -192,7 +211,8 @@ export class Hub {
     private pickSeat(hill: Hill): { x: number; z: number } {
         // 모닥불 둘레에 고르게: 무작위 방향, 불에서 가까운 곳부터 조금씩 멀리 (카메라가 불 둘레를 돌아 어느 쪽을 봐도 누군가 앉아 있게)
         // 다른 사람과 겹치지 않는 첫 자리. 끝내 못 찾으면 시도한 곳 중 가장 덜 붐비는 자리
-        let best = { x: 0, z: 0 }, bestGap = -1;
+        let best = { x: 0, z: 0 },
+            bestGap = -1;
         for (let i = 0; i < 80; i++) {
             const a = Math.random() * Math.PI * 2;
             const r = FIRE_KEEP_OUT + 0.6 + i * 0.09 + Math.random() * 0.6;

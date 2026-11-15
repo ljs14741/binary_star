@@ -166,3 +166,18 @@ describe("언덕 허브", () => {
         expect((last(c) as Extract<ServerMsg, { t: "hello" }>).daily).toMatchObject({ storyId: 43, final: true });
     });
 });
+
+describe("소원 부두 좌표", () => {
+    it("부두 위는 언덕 범위 밖이어도 그대로 두고, 그 옆 바다는 언덕으로 자른다", async () => {
+        const { clampHill, onDock, WISH_DOCK, HILL_HALF_D } = await import("@/lib/realtime/protocol");
+        const dx = Math.sin((WISH_DOCK.az * Math.PI) / 180), dz = -Math.cos((WISH_DOCK.az * Math.PI) / 180);
+        const end = { x: WISH_DOCK.x + dx * (WISH_DOCK.len - 0.4), z: WISH_DOCK.z + dz * (WISH_DOCK.len - 0.4) };
+        expect(end.z).toBeLessThan(-HILL_HALF_D);
+        expect(onDock(end.x, end.z)).toBe(true);
+        expect(clampHill(end.x, end.z)).toEqual(end);
+        const off = { x: end.x + 3, z: end.z };
+        expect(onDock(off.x, off.z)).toBe(false);
+        expect(clampHill(off.x, off.z).z).toBe(-HILL_HALF_D);
+        expect(clampHill(0, 0)).toEqual({ x: 0, z: 0 });
+    });
+});

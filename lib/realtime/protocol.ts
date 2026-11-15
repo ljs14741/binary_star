@@ -12,6 +12,21 @@ export const HILL_CAP = 60; // 언덕 정원. 모닥불 둘레에 겹치지 않�
 export const MIN_SEAT_DIST = 0.9; // 자리 사이 최소 거리
 export const FIRE_POS = { x: 0, z: -1.2 }; // 모닥불 자리 (언덕 가운데 조금 앞). 자리 배정 때 피함
 export const FIRE_KEEP_OUT = 1.7; // 불 둘레 빈자리 (모닥불 키우며 1.3 → 1.7)
+// 소원 부두: 모닥불 왼쪽 앞에서 달(방위 az) 쪽으로 뻗은 나무 부두. 언덕 범위 밖이어도 부두 위면 설 수 있음
+export const WISH_DOCK = { x: -3.2, z: -4.3, az: -15, len: 5.4, halfW: 0.85 };
+const DOCK_DIR = { x: Math.sin((WISH_DOCK.az * Math.PI) / 180), z: -Math.cos((WISH_DOCK.az * Math.PI) / 180) };
+export function onDock(x: number, z: number): boolean {
+    const dx = x - WISH_DOCK.x,
+        dz = z - WISH_DOCK.z;
+    const along = dx * DOCK_DIR.x + dz * DOCK_DIR.z;
+    const side = Math.abs(dx * DOCK_DIR.z - dz * DOCK_DIR.x);
+    return along >= -0.2 && along <= WISH_DOCK.len + 0.1 && side <= WISH_DOCK.halfW;
+}
+// 언덕 범위로 자르되, 부두 위 자리는 그대로 둠
+export function clampHill(x: number, z: number): { x: number; z: number } {
+    if (onDock(x, z)) return { x, z };
+    return { x: Math.max(-HILL_HALF_W, Math.min(HILL_HALF_W, x)), z: Math.max(-HILL_HALF_D, Math.min(HILL_HALF_D, z)) };
+}
 export const TICK_MS = 100; // 10Hz 묶음 전송
 export const DAILY_WINDOW_MS = 10 * 60 * 1000; // 의식 뒤 10분 안에 들어오면 같은 연출
 

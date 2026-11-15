@@ -12,7 +12,7 @@ import { formatNumber } from "@/lib/format";
 export type WishItem = { id: number; body: string; cheers: number; cheered: boolean; mine: boolean };
 const MAX = 60;
 
-export function WishCompose({ open, count, onClose, onSent }: { open: boolean; count: number; onClose: () => void; onSent: (crisis: boolean) => void }) {
+export function WishCompose({ open, count, onClose, onSent, onOpenList }: { open: boolean; count: number; onClose: () => void; onSent: (crisis: boolean) => void; onOpenList: () => void }) {
     const t = useT();
     const lang = useLang();
     const [text, setText] = useState("");
@@ -61,7 +61,10 @@ export function WishCompose({ open, count, onClose, onSent }: { open: boolean; c
                                 <X size={18} />
                             </button>
                         </div>
-                        <p className="mb-3 text-[12px] text-dim">{t("wish_count", { n: formatNumber(count, lang) })}</p>
+                        {/* 오늘 밤 소원 수: 누르면 모두 보기 */}
+                        <button type="button" onClick={onOpenList} className="mb-3 text-[12px] text-star-soft underline-offset-2 hover:underline">
+                            {t("wish_count", { n: formatNumber(count, lang) })} · {t("wish_all")}
+                        </button>
                         <input
                             value={text}
                             onChange={(e) => setText(e.target.value.slice(0, MAX))}
@@ -84,47 +87,88 @@ export function WishCompose({ open, count, onClose, onSent }: { open: boolean; c
                 </>
             )}
         </AnimatePresence>,
-        document.body
+        document.body,
     );
 }
 
-export function WishView({ wish, onClose, onCheered }: { wish: WishItem | null; onClose: () => void; onCheered: (id: number, cheers: number) => void }) {
+// 빌어 주기 버튼: 내 소원이면 표시만, 빌어 주면 톡 튀며 채워짐
+function CheerButton({ w, onCheer, small }: { w: WishItem; onCheer: (id: number) => void; small?: boolean }) {
     const t = useT();
     const lang = useLang();
-    const [state, setState] = useState<{ id: number; cheers: number; cheered: boolean; reported: boolean } | null>(null);
-    const cur = wish && state?.id === wish.id ? state : wish ? { id: wish.id, cheers: wish.cheers, cheered: wish.cheered, reported: false } : null;
-    const cheer = async () => {
-        if (!wish || !cur || cur.cheered || wish.mine) return;
-        setState({ ...cur, cheered: true, cheers: cur.cheers + 1 });
-        try {
-            navigator.vibrate?.(14);
-        } catch {}
-        const r = await api<{ cheers: number }>(`/api/wishes/${wish.id}/cheer`, { method: "POST" });
-        if (r.ok) onCheered(wish.id, r.cheers);
-    };
+    const done = w.cheered;
+    if (w.mine)
+        return (
+            <span className={`inline-flex items-center gap-1 rounded-full border border-star/25 text-dim ${small ? "h-8 px-3 text-[11px]" : "h-11 px-5 text-sm"}`}>
+                <MoonStar size={small ? 12 : 15} className="text-star-soft" /> {t("wish_mine")} · 🙏 {formatNumber(w.cheers, lang)}
+            </span>
+        );
+    return (
+        <motion.button
+            key={done ? "y" : "n"}
+            initial={done ? { scale: 0.8 } : false}
+            animate={{ scale: 1 }}
+            transition={{ type: "spring", stiffness: 500, damping: 14 }}
+            onClick={() => !done && onCheer(w.id)}
+            disabled={done}
+            aria-pressed={done}
+            className={`inline-flex items-center gap-1.5 rounded-full font-semibold ${small ? "h-8 px-3 text-[12px]" : "h-11 px-6 text-sm"} ${done ? "border border-star/50 bg-star/15 text-star" : "btn-star"}`}
+        >
+            <Heart size={small ? 12 : 15} className={done ? "fill-current" : ""} /> {done ? t("wish_cheered") : t("wish_cheer")} · {formatNumber(w.cheers, lang)}
+        </motion.button>
+    );
+}
+
+export function WishView({ wish, onClose, onCheer, onOpenList }: { wish: WishItem | null; onClose: () => void; onCheer: (id: number) => void; onOpenList: () => void }) {
+    const t = useT();
+    const [reported, setReported] = useState<number | null>(null);
     const report = async () => {
-        if (!wish || !cur || cur.reported) return;
-        setState({ ...cur, reported: true });
+        if (!wish || reported === wish.id) return;
+        setReported(wish.id);
         await api(`/api/wishes/${wish.id}/report`, { method: "POST" });
     };
     return (
         <BottomSheet open={!!wish} onClose={onClose} title={t("wish_from")}>
-            {wish && cur && (
+            {wish && (
                 <div>
                     <p className="story-body text-center text-[17px] leading-relaxed text-ink">“{wish.body}”</p>
-                    <button
-                        onClick={cheer}
-                        disabled={cur.cheered || wish.mine}
-                        className={`mx-auto mt-5 flex h-11 items-center gap-2 rounded-full px-6 text-sm font-semibold ${cur.cheered || wish.mine ? "border border-star/40 text-star-soft" : "btn-star"}`}
-                    >
-                        <Heart size={15} className={cur.cheered ? "fill-current" : ""} /> {cur.cheered ? t("wish_cheered") : t("wish_cheer")} · {formatNumber(cur.cheers, lang)}
-                    </button>
-                    {!wish.mine && (
-                        <button onClick={report} disabled={cur.reported} className="mx-auto mt-3 block text-[11px] text-dim underline-offset-2 hover:underline disabled:no-underline">
-                            {cur.reported ? t("wish_reported") : t("wish_report")}
+                    <div className="mt-5 flex justify-center">
+                        <CheerButton w={wish} onCheer={onCheer} />
+                    </div>
+                    <div className="mt-4 flex items-center justify-center gap-4 text-[12px]">
+                        <button onClick={onOpenList} className="text-star-soft underline-offset-2 hover:underline">
+                            {t("wish_all")}
                         </button>
-                    )}
+                        {!wish.mine && (
+                            <button onClick={report} disabled={reported === wish.id} className="text-dim underline-offset-2 hover:underline disabled:no-underline">
+                                {reported === wish.id ? t("wish_reported") : t("wish_report")}
+                            </button>
+                        )}
+                    </div>
                 </div>
+            )}
+        </BottomSheet>
+    );
+}
+
+// 오늘 밤 소원 모두 보기: 하늘엔 20개까지만 뜨니 여기서 전부
+export function WishList({ open, items, onClose, onCheer }: { open: boolean; items: WishItem[]; onClose: () => void; onCheer: (id: number) => void }) {
+    const t = useT();
+    const lang = useLang();
+    return (
+        <BottomSheet open={open} onClose={onClose} title={`${t("wish_list_title")} · ${formatNumber(items.length, lang)}`}>
+            {items.length === 0 ? (
+                <p className="py-6 text-center text-[14px] text-dim">{t("wish_empty")}</p>
+            ) : (
+                <ul className="max-h-[60vh] space-y-2 overflow-y-auto pr-1">
+                    {items.map((w) => (
+                        <li key={w.id} className="glass flex flex-col gap-2 rounded-2xl px-4 py-3">
+                            <p className="story-body text-[15px] leading-relaxed text-ink">🏮 {w.body}</p>
+                            <div className="flex justify-end">
+                                <CheerButton w={w} onCheer={onCheer} small />
+                            </div>
+                        </li>
+                    ))}
+                </ul>
             )}
         </BottomSheet>
     );
