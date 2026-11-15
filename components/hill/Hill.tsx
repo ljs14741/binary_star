@@ -254,7 +254,7 @@ function Hill3D({ initialTotal }: Props) {
         <section className="hill-wrap" aria-label={t("hill_title")}>
             <canvas ref={canvasRef} className="hill-canvas" />
 
-            {/* 위: 주제(방) 이름 · 넘기기 · 같이 보는 사람. 별자리 이름은 아래 작게 */}
+            {/* 위: 주제(방) 이름 · 넘기기 · 같이 보는 사람. 별자리 이름은 하늘 이름표에만 작게 */}
             <div className="pointer-events-none absolute inset-x-0 top-2 flex flex-col items-center gap-1 px-3">
                 <div className="pointer-events-auto flex w-full max-w-[480px] items-center justify-between">
                     <button onClick={() => go(-1)} aria-label={t("hill_prev")} className="glass rounded-full p-2 text-muted active:scale-95" disabled={rooms.length < 2}>
@@ -262,9 +262,8 @@ function Hill3D({ initialTotal }: Props) {
                     </button>
                     <div className="min-w-0 text-center">
                         <AnimatePresence mode="wait">
-                            <motion.h2 key={slot ? index : "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }} className="flex flex-col items-center leading-tight drop-shadow">
-                                <span className={`truncate text-lg ${room ? "font-semibold text-ink" : "font-medium text-muted"}`}>{slot ? (room ? room.title : t("hill_empty_zodiac")) : t("hill_title")}</span>
-                                {slot && <span className="text-[11px] font-normal text-dim">{slot.zodiac.symbol} {slot.zodiac.names[lang]}</span>}
+                            <motion.h2 key={slot ? index : "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }} className={`truncate text-lg leading-tight drop-shadow ${room ? "font-semibold text-ink" : "font-medium text-muted"}`}>
+                                {slot ? (room ? room.title : t("hill_empty_zodiac")) : t("hill_title")}
                             </motion.h2>
                         </AnimatePresence>
                     </div>

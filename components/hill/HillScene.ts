@@ -39,6 +39,7 @@ const HIGHLIGHT_EVERY = 5.5; // 초
 const EMPTY_WAIT = 9; // 빈 별자리에 머무는 시간
 const IDLE_BEFORE_AUTO = 20; // 마지막 조작 뒤 이만큼 지나야 다음 별자리로 자동으로 넘어감
 const WAVE_SEC = 2.2;
+const MOON_AZ = -15, MOON_ELEV = 33; // 달 방위·고도(도). 바다 달빛 길(scenery)도 같은 방위
 const PORTRAIT_CAM_FWD = 3.2; // 세로 화면에서 카메라가 섬 쪽으로 다가가는 거리
 const DEG = Math.PI / 180;
 const CAM_Y = SKY_ORIGIN.y;
@@ -201,15 +202,15 @@ export class HillScene {
         this.scenery = new Scenery({ reduceMotion: opts.reduceMotion, isMobile }, FIRE_POS.x, FIRE_POS.z, hillHeight(FIRE_POS.x, FIRE_POS.z));
         this.scene.add(this.scenery.group);
 
-        // 달: 정면 왼쪽, 바다 위 낮게 (별자리 칸 사이 az -15·고도 13. 폰 첫 화면에서 안 올려도 보이고 문장 카드에 안 가림)
-        const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,236,196"), transparent: true, opacity: 0.5, depthWrite: false, blending: THREE.AdditiveBlending }));
-        const moonAt = fromAngles(-15, 13, DOME_R * 1.1);
+        // 달: 정면 왼쪽 별자리 칸 사이(az -15), 별자리 띠 높이(고도 33). 작게 해서 이름표·문장 카드·칸과 안 겹치고, 폰 왼쪽 가장자리 안에 들어옴
+        const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,236,196"), transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending }));
+        const moonAt = fromAngles(MOON_AZ, MOON_ELEV, DOME_R * 1.1);
         moonGlow.position.set(moonAt.x, moonAt.y, moonAt.z);
-        moonGlow.scale.set(20, 20, 1);
+        moonGlow.scale.set(11, 11, 1);
         this.scene.add(moonGlow);
         const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,244,214"), transparent: true, opacity: 1, depthWrite: false }));
         moon.position.copy(moonGlow.position);
-        moon.scale.set(6.2, 6.2, 1);
+        moon.scale.set(4.2, 4.2, 1);
         this.scene.add(moon);
 
         const bg = this.makeBackgroundStars(isMobile ? 600 : 900);

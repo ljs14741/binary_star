@@ -189,7 +189,8 @@ export class Scenery {
 
         // ---- 바다: 언덕 너머(z < -13) 넓게
         const lampPos = new THREE.Vector3(21, 5.6, -50);
-        const moonDir = new THREE.Vector2(Math.sin(-24 * Math.PI / 180), -Math.cos(-24 * Math.PI / 180)).normalize();
+        // 달빛 길 방향 = 달 방위(HillScene MOON_AZ 와 맞춤)
+        const moonDir = new THREE.Vector2(Math.sin(-15 * Math.PI / 180), -Math.cos(-15 * Math.PI / 180)).normalize();
         this.seaMat = new THREE.ShaderMaterial({
             vertexShader: SEA_VERT,
             fragmentShader: SEA_FRAG,
