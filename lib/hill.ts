@@ -9,7 +9,7 @@ import { toStoryViews, type StoryView } from "./stories";
 export const STARS_PER_ROOM = 10;
 
 export type SkyStar = { id: number; room: string; c: number; lang: string; nick: string | null; line: string; at: number };
-export type SkyRoom = { slug: string; title: string; sector: number; stars: SkyStar[] };
+export type SkyRoom = { slug: string; title: string; sector: number; count: number; stars: SkyStar[] }; // count: 공개 이야기 수 (주제 판에 표시)
 export type SkyData = { rooms: SkyRoom[]; generatedAt: number };
 
 // 하늘: 방마다 별자리 하나 = 그 방에서 공감 많은 이야기 10개 (모자라면 최근 공개 글로 채움). 30초 캐시
@@ -30,7 +30,7 @@ export async function getSky(lang: Lang): Promise<SkyData> {
                 seen.add(s.id);
                 stars.push({ id: s.id, room: s.room.slug, c: s.empathy_count, lang: s.lang, nick: s.nickname, line: excerpt(s.body, 70), at: s.published_at ? s.published_at.getTime() : 0 });
             }
-            out.push({ slug: r.slug, title: r.title, sector: i, stars });
+            out.push({ slug: r.slug, title: r.title, sector: i, count: r.storyCount, stars });
         }
         return { rooms: out, generatedAt: Date.now() };
     });
@@ -44,7 +44,13 @@ function kstDate(now = Date.now()): string {
 export async function getDailyStory(lang: Lang, voterKey?: string): Promise<StoryView | null> {
     const id = await memo(`hill:daily:${kstDate()}`, 24 * 3600 * 1000, async () => {
         const since = new Date(Date.now() - 24 * 3600 * 1000);
-        const top = await prisma.empathy.groupBy({ by: ["story_id"], where: { created_at: { gte: since }, story: { status: "public", is_seed: false } }, _count: { story_id: true }, orderBy: { _count: { story_id: "desc" } }, take: 1 });
+        const top = await prisma.empathy.groupBy({
+            by: ["story_id"],
+            where: { created_at: { gte: since }, story: { status: "public", is_seed: false } },
+            _count: { story_id: true },
+            orderBy: { _count: { story_id: "desc" } },
+            take: 1,
+        });
         if (top[0]) return top[0].story_id;
         const recent = await prisma.story.findMany({ where: { status: "public" }, orderBy: { published_at: "desc" }, take: 30, select: { id: true } });
         if (recent.length === 0) return null;

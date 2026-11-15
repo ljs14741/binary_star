@@ -110,6 +110,7 @@ function Hill3D({ initialTotal }: Props) {
     const [wishTapped, setWishTapped] = useState<number | null>(null);
     const [wishCrisis, setWishCrisis] = useState(false);
     const [wishListOpen, setWishListOpen] = useState(false);
+    const [topicOpen, setTopicOpen] = useState(false); // 주제 판 (제목·점을 누르면)
     const [wishes, setWishes] = useState<{ count: number; items: WishItem[] }>({ count: 0, items: [] });
     const loadWishes = useCallback(() => {
         void api<{ count: number; items: WishItem[] }>("/api/wishes").then((r) => {
@@ -377,7 +378,8 @@ function Hill3D({ initialTotal }: Props) {
                     <button onClick={() => go(-1)} aria-label={t("hill_prev")} className="glass rounded-full p-2 text-muted active:scale-95" disabled={rooms.length < 2}>
                         <ChevronLeft size={18} />
                     </button>
-                    <div className="min-w-0 text-center">
+                    {/* 제목을 누르면 주제 판: 12칸을 한눈에 보고 바로 넘어감 */}
+                    <button onClick={() => setTopicOpen(true)} aria-label={t("topics_title")} className="flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-center active:scale-[0.98]">
                         <AnimatePresence mode="wait">
                             <motion.h2
                                 key={slot ? index : "none"}
@@ -390,26 +392,22 @@ function Hill3D({ initialTotal }: Props) {
                                 {slot ? (room ? room.title : t("hill_empty_zodiac")) : t("hill_title")}
                             </motion.h2>
                         </AnimatePresence>
-                    </div>
+                        <ChevronDown size={15} className="shrink-0 text-star-soft" />
+                    </button>
                     <button onClick={() => go(1)} aria-label={t("hill_next")} className="glass rounded-full p-2 text-muted active:scale-95" disabled={rooms.length < 2}>
                         <ChevronRight size={18} />
                     </button>
                 </div>
-                {/* 12칸 띠(점): 지금 보는 자리·주제 있는 자리 표시. 기호 대신 점이라 별자리는 보조로만 */}
-                <div className="flex items-center">
+                {/* 12칸 띠(점): 지금 보는 자리·주제 있는 자리 표시. 점이 작아 누르면 주제 판이 열림 */}
+                <button onClick={() => setTopicOpen(true)} aria-label={t("topics_title")} className="pointer-events-auto flex items-center px-2 py-1">
                     {slots.map((s, i) => (
-                        <button
-                            key={s.zodiac.name}
-                            aria-label={`${s.room ? `${s.room.title} · ` : ""}${s.zodiac.names[lang]}`}
-                            onClick={() => sceneRef.current?.goTo(i)}
-                            className="pointer-events-auto flex h-5 w-5 items-center justify-center"
-                        >
+                        <span key={s.zodiac.name} className="flex h-4 w-5 items-center justify-center">
                             <span
                                 className={`block rounded-full transition-all ${i === index ? "h-2.5 w-2.5 bg-star shadow-[0_0_6px_rgba(255,216,107,0.8)]" : s.room ? "h-1.5 w-1.5 bg-ink/80" : "h-1.5 w-1.5 bg-white/25"}`}
                             />
-                        </button>
+                        </span>
                     ))}
-                </div>
+                </button>
                 {/* 한 줄: 지금 접속 인원/정원 */}
                 <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-[11px] text-muted">
                     <span className={`inline-block h-1.5 w-1.5 rounded-full ${status === "open" ? "bg-star" : "bg-dim"}`} />
@@ -542,6 +540,46 @@ function Hill3D({ initialTotal }: Props) {
                 }}
             />
             <WishList open={wishListOpen} items={wishes.items} onClose={() => setWishListOpen(false)} onCheer={cheerWish} />
+            {/* 주제 판: 12칸 한눈에. 누르면 하늘이 그 별자리로 돎 */}
+            <BottomSheet open={topicOpen} onClose={() => setTopicOpen(false)} title={t("topics_title")}>
+                <ul className="grid max-h-[62vh] grid-cols-2 gap-2 overflow-y-auto pr-0.5">
+                    {slots.map((s, i) => {
+                        const now = i === index;
+                        if (!s.room)
+                            return (
+                                <li key={s.zodiac.name}>
+                                    <Link
+                                        href={langPath(lang, "/propose")}
+                                        onClick={() => setTopicOpen(false)}
+                                        className={`flex h-full flex-col justify-between rounded-2xl border border-dashed px-3 py-2.5 text-left ${now ? "border-star/60 bg-star/10" : "border-line/80"}`}
+                                    >
+                                        <span className="text-[14px] font-medium text-star-soft">+ {t("hill_propose")}</span>
+                                        <span className="mt-1.5 text-[11px] text-dim">
+                                            {s.zodiac.names[lang]} · {t("hill_empty_zodiac")}
+                                        </span>
+                                    </Link>
+                                </li>
+                            );
+                        return (
+                            <li key={s.zodiac.name}>
+                                <button
+                                    onClick={() => {
+                                        setTopicOpen(false);
+                                        sceneRef.current?.goTo(i);
+                                    }}
+                                    aria-current={now ? "true" : undefined}
+                                    className={`glass flex h-full w-full flex-col justify-between rounded-2xl px-3 py-2.5 text-left active:scale-[0.98] ${now ? "!border-star/60 !bg-star/15" : ""}`}
+                                >
+                                    <span className={`break-keep text-[14px] font-semibold leading-snug ${now ? "text-star" : "text-ink"}`}>{s.room.title}</span>
+                                    <span className="mt-1.5 text-[11px] text-dim">
+                                        {s.zodiac.names[lang]} · {t("topics_count", { n: formatNumber(s.room.count, lang) })}
+                                    </span>
+                                </button>
+                            </li>
+                        );
+                    })}
+                </ul>
+            </BottomSheet>
             <BottomSheet open={wishCrisis} onClose={() => setWishCrisis(false)} title={t("wish_title")}>
                 <CrisisNotice />
             </BottomSheet>
