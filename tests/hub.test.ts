@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { Hub, type Socket } from "@/lib/realtime/hub";
-import type { ServerMsg } from "@/lib/realtime/protocol";
+import { FIRE_KEEP_OUT, FIRE_POS, HILL_CAP, MIN_SEAT_DIST, type ServerMsg } from "@/lib/realtime/protocol";
 
 function fakeSocket() {
     const log: ServerMsg[] = [];
@@ -62,6 +62,15 @@ describe("언덕 허브", () => {
         (hub as unknown as { tick: () => void }).tick();
         const t = a.log.find((m) => m.t === "tick" && m.j?.some((j) => j.id === mb.id)) as Extract<ServerMsg, { t: "tick" }> | undefined;
         expect(t?.j?.find((j) => j.id === mb.id)?.n).toBe("늦은 고래");
+    });
+
+    it("정원을 꽉 채워도 자리가 겹치지 않음 (모닥불 둘레)", () => {
+        for (let t = 0; t < 5; t++) {
+            const hub = new Hub(HILL_CAP);
+            const ms = Array.from({ length: HILL_CAP }, (_, i) => hub.join(fakeSocket(), `voter-seat-${t}-${i}`, "KR"));
+            for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) expect(Math.hypot(ms[i].x - ms[j].x, ms[i].z - ms[j].z)).toBeGreaterThanOrEqual(MIN_SEAT_DIST);
+            for (const m of ms) expect(Math.hypot(m.x - FIRE_POS.x, m.z - FIRE_POS.z)).toBeGreaterThanOrEqual(FIRE_KEEP_OUT);
+        }
     });
 
     it("정원이 차면 다음 언덕으로", () => {

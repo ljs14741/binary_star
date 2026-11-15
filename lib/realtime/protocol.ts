@@ -6,7 +6,7 @@ export const GESTURES: Gesture[] = ["wave", "lookup", "hug"];
 // 언덕 평면 좌표 범위 (x: 좌우, z: 앞뒤. 카메라는 +z 쪽에서 -z(하늘)를 봄)
 export const HILL_HALF_W = 9;
 export const HILL_HALF_D = 4.5;
-export const HILL_CAP = 150; // 언덕 정원
+export const HILL_CAP = 60; // 언덕 정원. 모닥불 둘레에 겹치지 않고 앉을 수 있는 수 (넘치면 같은 하늘의 두 번째 언덕)
 export const MIN_SEAT_DIST = 0.9; // 자리 사이 최소 거리
 export const FIRE_POS = { x: 0, z: -1.2 }; // 모닥불 자리 (언덕 가운데 조금 앞). 자리 배정 때 피함
 export const FIRE_KEEP_OUT = 1.3;

@@ -175,24 +175,24 @@ export class Hub {
     }
 
     private pickSeat(hill: Hill): { x: number; z: number } {
-        // 모닥불 둘레에 고르게: 무작위 방향, 불에서 가까운 곳부터 조금씩 멀리. 다른 사람과 겹치지 않는 자리
-        // (카메라가 불 둘레를 돌기 때문에 어느 쪽을 봐도 누군가 앉아 있게)
-        for (let i = 0; i < 30; i++) {
+        // 모닥불 둘레에 고르게: 무작위 방향, 불에서 가까운 곳부터 조금씩 멀리 (카메라가 불 둘레를 돌아 어느 쪽을 봐도 누군가 앉아 있게)
+        // 다른 사람과 겹치지 않는 첫 자리. 끝내 못 찾으면 시도한 곳 중 가장 덜 붐비는 자리
+        let best = { x: 0, z: 0 }, bestGap = -1;
+        for (let i = 0; i < 80; i++) {
             const a = Math.random() * Math.PI * 2;
-            const r = FIRE_KEEP_OUT + 0.6 + i * 0.12 + Math.random() * 0.6;
+            const r = FIRE_KEEP_OUT + 0.6 + i * 0.09 + Math.random() * 0.6;
             const x = round1(clamp(FIRE_POS.x + Math.cos(a) * r, -HILL_HALF_W, HILL_HALF_W));
             const z = round1(clamp(FIRE_POS.z + Math.sin(a) * r, -HILL_HALF_D, HILL_HALF_D));
-            let ok = Math.hypot(x - FIRE_POS.x, z - FIRE_POS.z) >= FIRE_KEEP_OUT;
-            for (const m of hill.members.values()) {
-                if (!ok) break;
-                if (Math.hypot(m.x - x, m.z - z) < MIN_SEAT_DIST) {
-                    ok = false;
-                    break;
-                }
+            if (Math.hypot(x - FIRE_POS.x, z - FIRE_POS.z) < FIRE_KEEP_OUT) continue;
+            let gap = Infinity;
+            for (const m of hill.members.values()) gap = Math.min(gap, Math.hypot(m.x - x, m.z - z));
+            if (gap >= MIN_SEAT_DIST) return { x, z };
+            if (gap > bestGap) {
+                bestGap = gap;
+                best = { x, z };
             }
-            if (ok) return { x, z };
         }
-        return { x: round1((Math.random() * 2 - 1) * HILL_HALF_W), z: round1((Math.random() * 2 - 1) * HILL_HALF_D) };
+        return best;
     }
 
     private tick() {
