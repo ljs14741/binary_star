@@ -35,7 +35,7 @@ export default function SiteHeader() {
                     {siteName(lang)}
                 </Link>
                 {/* binaryworld 로 가는 길 (누구나). 폰에선 아이콘만 */}
-                <a href={sisterUrl("https://binaryworld.kr")} title={t("bw_home")} aria-label={t("bw_home")} className="flex h-7 shrink-0 items-center gap-1 rounded-full border border-line px-2 text-[11px] text-dim hover:text-ink">
+                <a href={sisterUrl("https://binaryworld.kr")} target="_blank" rel="noopener" title={t("bw_home")} aria-label={t("bw_home")} className="flex h-7 shrink-0 items-center gap-1 rounded-full border border-line px-2 text-[11px] text-dim hover:text-ink">
                     <LayoutGrid size={12} />
                     <span className="hidden sm:inline">binaryworld</span>
                 </a>

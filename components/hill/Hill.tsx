@@ -412,7 +412,7 @@ function Hill3D({ initialTotal }: Props) {
                 <p className="mt-5 text-[12px] text-dim">{t("help_more")}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
                     {SISTER_SITES.map((s) => (
-                        <a key={s.name} href={sisterUrl(s.url)} className="rounded-full border border-line px-3 py-1 text-[12px] text-muted hover:text-ink">
+                        <a key={s.name} href={sisterUrl(s.url)} target="_blank" rel="noopener" className="rounded-full border border-line px-3 py-1 text-[12px] text-muted hover:text-ink">
                             {s.name}
                         </a>
                     ))}
