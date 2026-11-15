@@ -10,10 +10,10 @@ varying vec2 vUv; varying vec3 vPos;
 void main(){ vUv = uv; vPos = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`;
 // 커튼 주름: 사인 몇 개를 겹쳐 천천히 흐르게. 아래는 초록, 위로 가며 보라
 const AURORA_FRAG = `
-varying vec2 vUv; uniform float uTime; uniform float uStill;
+varying vec2 vUv; uniform float uTime; uniform float uStill; uniform float uGain; uniform float uSeed;
 void main(){
     float x = vUv.x, y = vUv.y;
-    float t = uTime * (1.0 - uStill * 0.9);
+    float t = uTime * (1.0 - uStill * 0.9) + uSeed;
     float fold = 0.55 + 0.45 * sin(x * 18.0 + t * 0.35) * sin(x * 7.0 - t * 0.21 + 1.3);
     fold *= 0.7 + 0.3 * sin(x * 31.0 + t * 0.6);
     float bottom = smoothstep(0.0, 0.18, y);
@@ -21,7 +21,7 @@ void main(){
     float wave = 0.6 + 0.4 * sin(x * 4.0 + t * 0.15);
     float a = bottom * top * fold * wave;
     float side = smoothstep(0.0, 0.12, x) * (1.0 - smoothstep(0.88, 1.0, x));
-    a *= side * 0.5;
+    a *= side * 0.5 * uGain;
     vec3 green = vec3(0.30, 0.95, 0.62), teal = vec3(0.25, 0.75, 0.85), purple = vec3(0.58, 0.32, 0.86);
     vec3 c = mix(green, teal, smoothstep(0.1, 0.5, y));
     c = mix(c, purple, smoothstep(0.4, 1.0, y));
@@ -141,7 +141,7 @@ function flameTexture(frame: number): THREE.Texture {
 
 export class Scenery {
     group = new THREE.Group();
-    private auroraMat: THREE.ShaderMaterial;
+    private auroraMats: THREE.ShaderMaterial[] = [];
     private seaMat: THREE.ShaderMaterial;
     private beam: THREE.Mesh;
     private lampGlow: THREE.Sprite;
@@ -161,31 +161,11 @@ export class Scenery {
     constructor(private opts: SceneryOpts, fireX: number, fireZ: number, fireY: number) {
         this.firePos = new THREE.Vector3(fireX, fireY, fireZ);
 
-        // ---- 오로라: 왼쪽 뒤 하늘에 띠 (방위각 -150~-30도, 고도 14~48도, 바다 위로. 돌아보면 보임)
-        const seg = 64, rows = 6;
-        const pos = new Float32Array((seg + 1) * (rows + 1) * 3), uv = new Float32Array((seg + 1) * (rows + 1) * 2), idx: number[] = [];
-        for (let r = 0; r <= rows; r++) {
-            for (let s = 0; s <= seg; s++) {
-                const h = -150 + (120 * s) / seg;
-                const v = 14 + (34 * r) / rows + Math.sin(s * 0.5) * 2.5;
-                const p = fromAngles(h, v, DOME_R * 1.18);
-                const i = r * (seg + 1) + s;
-                pos[i * 3] = p.x;
-                pos[i * 3 + 1] = p.y;
-                pos[i * 3 + 2] = p.z;
-                uv[i * 2] = s / seg;
-                uv[i * 2 + 1] = r / rows;
-                if (r < rows && s < seg) idx.push(i, i + 1, i + seg + 1, i + 1, i + seg + 2, i + seg + 1);
-            }
-        }
-        const ag = new THREE.BufferGeometry();
-        ag.setAttribute("position", new THREE.BufferAttribute(pos, 3));
-        ag.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
-        ag.setIndex(idx);
-        this.auroraMat = new THREE.ShaderMaterial({ vertexShader: AURORA_VERT, fragmentShader: AURORA_FRAG, uniforms: { uTime: { value: 0 }, uStill: { value: opts.reduceMotion ? 1 : 0 } }, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending });
-        const aurora = new THREE.Mesh(ag, this.auroraMat);
-        aurora.frustumCulled = false;
-        this.group.add(aurora);
+        // ---- 오로라 두 줄
+        // 1) 왼쪽 뒤 하늘에 높은 커튼 (방위각 -150~-30도, 고도 14~48도. 돌아보면 보임)
+        this.addAurora(-150, -30, 14, 48, 1, 0);
+        // 2) 처음 들어오면 바로 보이게 정면 바다 위 수평선에 낮게 깔린 띠 (별자리·달 아래, 고도 3~22도)
+        this.addAurora(-80, 80, 3, 22, 1.05, 37);
 
         // ---- 바다: 언덕 너머(z < -13) 넓게
         const lampPos = new THREE.Vector3(21, 5.6, -50);
@@ -355,8 +335,45 @@ export class Scenery {
         return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false }));
     }
 
+    // 하늘에 오로라 띠 하나 (방위각 h0~h1, 고도 v0~v1, 밝기 gain, 무늬 seed)
+    private addAurora(h0: number, h1: number, v0: number, v1: number, gain: number, seed: number) {
+        const seg = 64, rows = 6;
+        const pos = new Float32Array((seg + 1) * (rows + 1) * 3), uv = new Float32Array((seg + 1) * (rows + 1) * 2), idx: number[] = [];
+        for (let r = 0; r <= rows; r++) {
+            for (let s = 0; s <= seg; s++) {
+                const h = h0 + ((h1 - h0) * s) / seg;
+                const v = v0 + ((v1 - v0) * r) / rows + Math.sin(s * 0.5 + seed) * 2.5 * ((v1 - v0) / 34);
+                const p = fromAngles(h, v, DOME_R * 1.18);
+                const i = r * (seg + 1) + s;
+                pos[i * 3] = p.x;
+                pos[i * 3 + 1] = p.y;
+                pos[i * 3 + 2] = p.z;
+                uv[i * 2] = s / seg;
+                uv[i * 2 + 1] = r / rows;
+                if (r < rows && s < seg) idx.push(i, i + 1, i + seg + 1, i + 1, i + seg + 2, i + seg + 1);
+            }
+        }
+        const ag = new THREE.BufferGeometry();
+        ag.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        ag.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+        ag.setIndex(idx);
+        const mat = new THREE.ShaderMaterial({
+            vertexShader: AURORA_VERT,
+            fragmentShader: AURORA_FRAG,
+            uniforms: { uTime: { value: 0 }, uStill: { value: this.opts.reduceMotion ? 1 : 0 }, uGain: { value: gain }, uSeed: { value: seed } },
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending,
+        });
+        const aurora = new THREE.Mesh(ag, mat);
+        aurora.frustumCulled = false;
+        this.group.add(aurora);
+        this.auroraMats.push(mat);
+    }
+
     update(now: number, dt: number, camYaw: number) {
-        this.auroraMat.uniforms.uTime.value = now;
+        for (const m of this.auroraMats) m.uniforms.uTime.value = now;
         this.seaMat.uniforms.uTime.value = now;
         // 등대: 7초에 한 바퀴. 빛살이 카메라(+z) 쪽을 지날 때 등불이 번쩍
         const ang = this.opts.reduceMotion ? Math.PI / 2 : (now * (Math.PI * 2)) / 7;
