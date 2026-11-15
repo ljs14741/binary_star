@@ -30,3 +30,10 @@
 - 카카오 공유: 카카오 개발자 콘솔 플랫폼(Web)에 `https://star.binaryworld.kr` 등록
 - 정식 오픈 전: `npm run db:clear-seed`(테스트 글 삭제), `ANTHROPIC_API_KEY` 를 compose 에 넣으면 AI 검수·번역 켜짐
 - 관리자 페이지: `https://star.binaryworld.kr/ko/admin?key=<STAR_ADMIN_KEY>` (키는 compose 환경변수 `STAR_ADMIN_KEY`, 로컬은 `.env.local`). 키 없으면 404. 방문자·글·공감·방별·최근 글 숨기기/내리기·신고·제안
+
+## 클라우드플레어 (2026-11-15 전환)
+- binaryworld.kr 네임서버 → 클라우드플레어(peter/zita.ns.cloudflare.com). 무료 플랜, 모든 서브도메인 프록시(주황 구름). SSL 모드 Full (strict). 되돌리기는 가비아에서 네임서버를 ns.gabia.co.kr / ns1.gabia.co.kr / ns.gabia.net 로
+- Caddyfile 전역 블록에 `trusted_proxies`(클라우드플레어 대역) + `client_ip_headers` → 앱이 보는 X-Forwarded-For 첫 값이 진짜 방문자 IP. 이게 없으면 Caddy 가 헤더를 버려서 모든 방문자가 클라우드플레어 IP(홍콩 등)로 보임 → 지역·공감 제한이 전부 섞임
+- 정적 파일(`/_next/static`)은 클라우드플레어 캐시(cf-cache-status HIT), HTML·API 는 DYNAMIC. 웹소켓(/ws) 무료 플랜에서 됨
+- 컨테이너 `star-app` 은 compose 에 `mem_limit: 1536m`
+- 확인(이 PC 에선 공인 IP 헤어핀이 안 되니 클라우드플레어 IP 로): `ip=$(dig +short A star.binaryworld.kr @peter.ns.cloudflare.com | head -1); curl -s --resolve star.binaryworld.kr:443:$ip https://star.binaryworld.kr/cdn-cgi/trace`
