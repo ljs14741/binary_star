@@ -11,7 +11,8 @@ import { useLang, useT } from "@/components/I18nProvider";
 import BottomSheet from "@/components/BottomSheet";
 import StoryCard from "@/components/StoryCard";
 import Stargazer from "@/components/Stargazer";
-import { api, getMineIds, langPath, siteOrigin } from "@/lib/client";
+import { api, ensureNickname, getMineIds, langPath, NICK_EVENT, siteOrigin, getNickname } from "@/lib/client";
+import { randomNickname } from "@/lib/nickname";
 import { formatNumber } from "@/lib/format";
 import { HillScene, hasWebGL, type HighlightInfo } from "./HillScene";
 import { assignRooms, ZODIAC } from "./constellations";
@@ -89,6 +90,12 @@ function Hill3D({ initialTotal }: Props) {
     const sitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [sky, setSky] = useState<SkyData | null>(null);
     const [shareOpen, setShareOpen] = useState(false);
+    // 헤더·글쓰기에서 별명을 바꾸면 언덕 이름표도 바로 바뀜
+    useEffect(() => {
+        const send = () => bridge.send({ t: "name", n: getNickname() || null });
+        window.addEventListener(NICK_EVENT, send);
+        return () => window.removeEventListener(NICK_EVENT, send);
+    }, [bridge]);
     const [index, setIndex] = useState(0);
     const [highlight, setHighlight] = useState<HighlightInfo>(null);
     const [story, setStory] = useState<StoryView | null>(null);
@@ -179,9 +186,12 @@ function Hill3D({ initialTotal }: Props) {
             onHello: (you, members) => {
                 scene.setMe(you.id);
                 scene.syncMembers(you, members);
+                // 내 별명을 언덕에 알림 (처음이면 여기서 자동으로 정해짐)
+                bridge.send({ t: "name", n: ensureNickname(() => randomNickname(lang)) || null });
             },
             onTick: (m, j, l) => scene.applyTick(m, j, l),
             onGesture: (id, g) => scene.gesture(id, g),
+            onName: (id, n) => scene.setName(id, n),
             onStar: (e: StarEvent) => {
                 scene.starEvent(e);
                 const mine = e.from != null && e.from === bridge.meId;

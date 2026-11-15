@@ -1,5 +1,6 @@
 // 언덕 실시간 허브. Next 에 의존하지 않음 (나중에 따로 띄울 수 있게). 소켓은 send 함수만 받음
 import { DAILY_WINDOW_MS, FIRE_KEEP_OUT, FIRE_POS, GESTURES, HILL_CAP, HILL_HALF_D, HILL_HALF_W, MIN_SEAT_DIST, TICK_MS, type ClientMsg, type DailyEvent, type Gesture, type MemberPublic, type Pose, type ServerMsg, type StarEvent } from "./protocol";
+import { checkNickname } from "../nickname";
 
 export type Socket = { send: (data: string) => void; close?: () => void };
 
@@ -15,6 +16,8 @@ type Member = {
     dirty: boolean;
     lastGesture: number;
     lastMove: number;
+    name: string | null;
+    lastName: number;
 };
 
 type Hill = {
@@ -26,6 +29,7 @@ type Hill = {
 
 const MOVE_MIN_INTERVAL = 150; // 이동 요청 최소 간격(ms)
 const GESTURE_MIN_INTERVAL = 1500;
+const NAME_MIN_INTERVAL = 1000; // 별명 바꾸기 최소 간격(ms)
 
 export class Hub {
     private hills: Hill[] = [];
@@ -55,7 +59,7 @@ export class Hub {
         if (!m) {
             const hill = this.pickHill();
             const seat = this.pickSeat(hill);
-            m = { id: this.nextId++, voterKey, country, x: seat.x, z: seat.z, pose: "sit", sockets: new Set(), hill, dirty: false, lastGesture: 0, lastMove: 0 };
+            m = { id: this.nextId++, voterKey, country, x: seat.x, z: seat.z, pose: "sit", sockets: new Set(), hill, dirty: false, lastGesture: 0, lastMove: 0, name: null, lastName: 0 };
             hill.members.set(m.id, m);
             hill.joined.push(pub(m));
             this.byVoter.set(voterKey, m);
@@ -108,6 +112,17 @@ export class Hub {
                 if (now - member.lastGesture < GESTURE_MIN_INTERVAL) return;
                 member.lastGesture = now;
                 this.broadcastHill(member.hill, { t: "gesture", id: member.id, g: msg.g as Gesture });
+                break;
+            }
+            case "name": {
+                // 별명: 글과 같은 검사. 안 맞으면 이름표 없음. 너무 자주 바꾸면 무시
+                if (now - member.lastName < NAME_MIN_INTERVAL) return;
+                const c = checkNickname(typeof msg.n === "string" ? msg.n : null);
+                const name = c.ok ? c.value : null;
+                if (name === member.name) return;
+                member.lastName = now;
+                member.name = name;
+                this.broadcastHill(member.hill, { t: "name", id: member.id, n: name });
                 break;
             }
             case "ping":
@@ -228,7 +243,7 @@ export class Hub {
 export type { Member };
 
 function pub(m: Member): MemberPublic {
-    return { id: m.id, c: m.country, x: round1(m.x), z: round1(m.z), p: m.pose };
+    return { id: m.id, c: m.country, x: round1(m.x), z: round1(m.z), p: m.pose, n: m.name };
 }
 function clamp(v: number, lo: number, hi: number) {
     return Math.min(hi, Math.max(lo, v));

@@ -36,6 +36,23 @@ describe("언덕 허브", () => {
         expect(hub.total()).toBe(0);
     });
 
+    it("별명은 검사해서 같은 언덕에 알리고, 새로 온 사람은 hello 에서 받음", () => {
+        const hub = new Hub(150);
+        const a = fakeSocket(), b = fakeSocket();
+        const ma = hub.join(a, "voter-na", "KR");
+        hub.join(b, "voter-nb", "KR");
+        hub.handle(ma, JSON.stringify({ t: "name", n: "포근한 고양이" }));
+        expect(last(b)).toEqual({ t: "name", id: ma.id, n: "포근한 고양이" });
+        const c = fakeSocket();
+        hub.join(c, "voter-nc", "JP");
+        const hc = last(c) as Extract<ServerMsg, { t: "hello" }>;
+        expect(hc.members.find((m) => m.id === ma.id)?.n).toBe("포근한 고양이");
+        // 금칙어 별명은 이름표 없음 (1초 간격 제한 지나서)
+        const mb = hub.join(fakeSocket(), "voter-nd", "KR");
+        hub.handle(mb, JSON.stringify({ t: "name", n: "섹스왕" }));
+        expect(c.log.some((m) => m.t === "name" && m.id === mb.id)).toBe(false);
+    });
+
     it("정원이 차면 다음 언덕으로", () => {
         const hub = new Hub(2);
         hub.join(fakeSocket(), "v1", null);

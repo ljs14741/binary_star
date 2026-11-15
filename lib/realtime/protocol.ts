@@ -13,13 +13,15 @@ export const FIRE_KEEP_OUT = 1.3;
 export const TICK_MS = 100; // 10Hz 묶음 전송
 export const DAILY_WINDOW_MS = 10 * 60 * 1000; // 의식 뒤 10분 안에 들어오면 같은 연출
 
-export type MemberPublic = { id: number; c: string | null; x: number; z: number; p: Pose };
+// n: 별명 (없으면 null → 화면엔 이름표 없음)
+export type MemberPublic = { id: number; c: string | null; x: number; z: number; p: Pose; n?: string | null };
 
 // 클라이언트 → 서버
 export type ClientMsg =
     | { t: "move"; x: number; z: number }
     | { t: "pose"; p: Pose }
     | { t: "gesture"; g: Gesture }
+    | { t: "name"; n: string | null }
     | { t: "ping" };
 
 export type StarEvent = { kind: "born" | "glow" | "dim"; storyId: number; roomSlug: string; count: number; lang: string; from?: number };
@@ -30,6 +32,7 @@ export type ServerMsg =
     | { t: "hello"; id: number; hill: string; you: MemberPublic; members: MemberPublic[]; total: number; countries: Record<string, number>; daily: DailyEvent | null }
     | { t: "tick"; m?: [number, number, number, Pose][]; j?: MemberPublic[]; l?: number[] }
     | { t: "gesture"; id: number; g: Gesture }
+    | { t: "name"; id: number; n: string | null }
     | { t: "star"; e: StarEvent }
     | { t: "count"; total: number; countries: Record<string, number> }
     | { t: "daily"; e: DailyEvent }

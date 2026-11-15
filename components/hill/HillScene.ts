@@ -65,6 +65,8 @@ type Person = {
     walkUntil: number;
     waveUntil: number;
     hearts: { sprite: THREE.Sprite; born: number }[];
+    name: string | null;
+    tag: THREE.Sprite | null; // 머리 위 별명표
 };
 
 type Constellation = {
@@ -739,7 +741,10 @@ export class HillScene {
     // ---------- 사람(별 요정) ----------
     setMe(id: number | null) {
         this.meId = id;
-        for (const p of this.people.values()) this.applyLook(p);
+        for (const p of this.people.values()) {
+            this.applyLook(p);
+            if (p.name) this.setName(p.id, p.name);
+        }
     }
 
     syncMembers(you: MemberPublic, members: MemberPublic[]) {
@@ -851,10 +856,12 @@ export class HillScene {
             group.add(glow);
             this.scene.add(group);
             const now = this.clock.getElapsedTime();
-            p = { id: m.id, group, body, glow, pal, target: new THREE.Vector2(m.x, m.z), pos: new THREE.Vector2(m.x, m.z), pose: m.p, bob: Math.random() * 6.28, nextBlink: now + 2 + Math.random() * 4, blinkUntil: 0, lookUntil: 0, happyUntil: 0, walkUntil: 0, waveUntil: 0, hearts: [] };
+            p = { id: m.id, group, body, glow, pal, target: new THREE.Vector2(m.x, m.z), pos: new THREE.Vector2(m.x, m.z), pose: m.p, bob: Math.random() * 6.28, nextBlink: now + 2 + Math.random() * 4, blinkUntil: 0, lookUntil: 0, happyUntil: 0, walkUntil: 0, waveUntil: 0, hearts: [], name: null, tag: null };
             this.people.set(m.id, p);
             this.applyLook(p);
+            if (m.n !== undefined) this.setName(m.id, m.n);
         } else {
+            if (m.n !== undefined && m.n !== p.name) this.setName(m.id, m.n);
             p.target.set(m.x, m.z);
             if (snap) p.pos.set(m.x, m.z);
             p.pose = m.p;
@@ -869,6 +876,30 @@ export class HillScene {
             this.texCache.set(pal.body, t);
         }
         return t;
+    }
+
+    // 머리 위 별명표. 내 것은 별빛 색, 다른 사람은 흰색 조금 흐리게
+    setName(id: number, name: string | null) {
+        const p = this.people.get(id);
+        if (!p) return;
+        p.name = name;
+        if (p.tag) {
+            p.group.remove(p.tag);
+            p.tag.material.map?.dispose();
+            p.tag.material.dispose();
+            p.tag = null;
+        }
+        if (!name) return;
+        const me = id === this.meId;
+        const t = textTexture(name, { size: 40, color: me ? "#ffe9a8" : "#ffffff", font: me ? "700" : "500", pad: 20 });
+        const tag = new THREE.Sprite(new THREE.SpriteMaterial({ map: t.tex, transparent: true, depthWrite: false, depthTest: false, opacity: me ? 1 : 0.75 }));
+        const h = 0.28;
+        tag.scale.set(h * t.aspect, h, 1);
+        tag.center.set(0.5, 0);
+        tag.position.y = 1.0;
+        tag.renderOrder = 5;
+        p.group.add(tag);
+        p.tag = tag;
     }
 
     private applyLook(p: Person) {
@@ -889,6 +920,10 @@ export class HillScene {
         (p.glow.material as THREE.Material).dispose();
         p.glow.geometry.dispose();
         for (const h of p.hearts) h.sprite.material.dispose();
+        if (p.tag) {
+            p.tag.material.map?.dispose();
+            p.tag.material.dispose();
+        }
         this.people.delete(id);
     }
 
