@@ -48,7 +48,7 @@ export default function NicknameChip() {
 
     return (
         <>
-            <button onClick={openSheet} title={t("nickname_change")} className="flex max-w-[9.5rem] items-center gap-1 rounded-full border border-line bg-card px-2.5 py-1 text-xs text-muted hover:text-ink">
+            <button onClick={openSheet} title={t("nickname_change")} className="flex min-w-0 max-w-[7.5rem] items-center sm:max-w-[9.5rem] gap-1 rounded-full border border-line bg-card px-2.5 py-1 text-xs text-muted hover:text-ink">
                 <UserRound size={13} className="shrink-0 text-star-soft" />
                 <span className="truncate">{nick || t("anonymous_name")}</span>
             </button>

@@ -20,7 +20,7 @@ import { setSoundPref, Sound, soundPref } from "@/lib/sound";
 import { useHillSocket } from "./useHillSocket";
 import ShareSheet from "@/components/ShareSheet";
 import DonorWall from "@/components/DonorWall";
-import { siteName } from "@/lib/site";
+import { SISTER_SITES, siteName, sisterUrl } from "@/lib/site";
 
 type Props = { initialTotal: number };
 
@@ -408,6 +408,15 @@ function Hill3D({ initialTotal }: Props) {
                 <button onClick={() => setHelpOpen(false)} className="btn-star mt-5 h-11 w-full rounded-full text-sm font-semibold">
                     {t("help_ok")}
                 </button>
+                {/* binaryworld 의 다른 놀거리 */}
+                <p className="mt-5 text-[12px] text-dim">{t("help_more")}</p>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                    {SISTER_SITES.map((s) => (
+                        <a key={s.name} href={sisterUrl(s.url)} className="rounded-full border border-line px-3 py-1 text-[12px] text-muted hover:text-ink">
+                            {s.name}
+                        </a>
+                    ))}
+                </div>
             </BottomSheet>
             <ShareSheet
                 open={shareOpen}

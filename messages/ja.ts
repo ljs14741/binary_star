@@ -282,6 +282,8 @@ export const ja: { [K in keyof typeof ko]: string } = {
     help_5: "地面をドラッグすると妖精が歩きます。にっこりボタンで気持ちを伝え、ほかの妖精をタップするとハートを送れます",
     help_6: "上のニックネームをタップすると変えられます。友だちを呼んで一緒にどうぞ",
     help_ok: "わかった",
+    bw_home: "binaryworld へ",
+    help_more: "binaryworld のほかの遊び",
     donate_title: "応援する",
     donate_body: "広告なしで、ひとりで作っています。\nコーヒー一杯分がサーバー代や新しい機能の力になります。",
     donate_chicken: "実はチキンが大好きです!! ❤️",

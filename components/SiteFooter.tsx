@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useLang, useT } from "./I18nProvider";
 import { langPath } from "@/lib/client";
-import { siteName, SISTER_SITES } from "@/lib/site";
+import { siteName, SISTER_SITES, sisterUrl } from "@/lib/site";
 
 export default function SiteFooter() {
     const lang = useLang();
@@ -19,7 +19,7 @@ export default function SiteFooter() {
             <p className="mb-2 flex flex-wrap justify-center gap-x-2 gap-y-1">
                 <span className="text-dim">{t("footer_sister")}</span>
                 {SISTER_SITES.map((s) => (
-                    <a key={s.url} href={s.url} className="text-muted hover:text-ink" target="_blank" rel="noopener">
+                    <a key={s.url} href={sisterUrl(s.url)} className="text-muted hover:text-ink" target="_blank" rel="noopener">
                         {s.name}
                     </a>
                 ))}

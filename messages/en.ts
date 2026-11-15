@@ -282,6 +282,8 @@ export const en: { [K in keyof typeof ko]: string } = {
     help_5: "Drag the ground to walk your fairy. Use the smile button to express a feeling, and tap another fairy to send a heart",
     help_6: "Tap your nickname at the top to change it. Invite a friend to sit with you",
     help_ok: "Got it",
+    bw_home: "Go to binaryworld",
+    help_more: "More from binaryworld",
     donate_title: "Support this site",
     donate_body: "This site is made by one person, with no ads.\nA coffee helps with server costs and new features.",
     donate_chicken: "Honestly, I love fried chicken!! ❤️",

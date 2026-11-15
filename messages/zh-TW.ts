@@ -282,6 +282,8 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     help_5: "拖曳地面讓小精靈走動。用笑臉按鈕表達心情，點其他小精靈就能送出愛心",
     help_6: "點上方的暱稱可以修改，也可以邀請朋友一起來",
     help_ok: "知道了",
+    bw_home: "前往 binaryworld",
+    help_more: "binaryworld 的其他好玩的",
     donate_title: "支持這個網站",
     donate_body: "這個網站沒有廣告，由一個人製作。\n一杯咖啡就能幫忙支付伺服器費用和新功能。",
     donate_chicken: "其實我超愛炸雞!! ❤️",

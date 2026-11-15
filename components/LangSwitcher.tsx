@@ -21,7 +21,7 @@ export default function LangSwitcher() {
 
     // 아이콘 하나만 보이고, 그 위에 투명한 select 를 겹쳐서 누르면 기기 기본 언어 목록이 뜸
     return (
-        <label title={t("lang_label")} className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-line bg-card text-muted hover:text-ink">
+        <label title={t("lang_label")} className="relative flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full border border-line bg-card text-muted hover:text-ink">
             <Globe2 size={16} />
             <select
                 aria-label={t("lang_label")}

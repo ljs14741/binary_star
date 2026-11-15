@@ -281,6 +281,8 @@ export const ko = {
     help_5: "땅을 끌면 내 요정이 걸어요. 웃는 얼굴 버튼으로 마음을 표현하고, 다른 요정을 누르면 하트를 보낼 수 있어요",
     help_6: "위쪽 별명을 누르면 바꿀 수 있어요. 친구 부르기 버튼으로 같이 와도 좋아요",
     help_ok: "알겠어요",
+    bw_home: "binaryworld 가기",
+    help_more: "binaryworld 의 다른 놀거리",
     donate_title: "별말씀 후원하기",
     donate_body: "별말씀은 광고 없이 혼자 만들고 있어요.\n따뜻한 커피 한 잔이면 서버비와 새 기능에 큰 힘이 돼요.",
     donate_chicken: "사실 치킨 좋아해요!! ❤️",

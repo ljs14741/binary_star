@@ -24,6 +24,8 @@ export const SISTER_SITES = [
     { name: "quiz", url: "https://quiz.binaryworld.kr" },
     { name: "map", url: "https://map.binaryworld.kr" },
 ] as const;
+// 별말씀에서 넘어간 걸 애널리틱스에서 알 수 있게 붙이는 표시
+export const sisterUrl = (url: string) => `${url}${url.includes("?") ? "&" : "?"}utm_source=star&utm_medium=link`;
 
 // 올린 뒤 수정·삭제 가능한 시간
 export const EDIT_WINDOW_MS = 10 * 60 * 1000;
