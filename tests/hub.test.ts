@@ -53,6 +53,17 @@ describe("언덕 허브", () => {
         expect(c.log.some((m) => m.t === "name" && m.id === mb.id)).toBe(false);
     });
 
+    it("입장 소식이 묶음으로 나가기 전에 별명을 보내도 입장 소식에 별명이 실림", () => {
+        const hub = new Hub(150);
+        const a = fakeSocket();
+        hub.join(a, "voter-ra", "KR");
+        const mb = hub.join(fakeSocket(), "voter-rb", "KR");
+        hub.handle(mb, JSON.stringify({ t: "name", n: "늦은 고래" }));
+        (hub as unknown as { tick: () => void }).tick();
+        const t = a.log.find((m) => m.t === "tick" && m.j?.some((j) => j.id === mb.id)) as Extract<ServerMsg, { t: "tick" }> | undefined;
+        expect(t?.j?.find((j) => j.id === mb.id)?.n).toBe("늦은 고래");
+    });
+
     it("정원이 차면 다음 언덕으로", () => {
         const hub = new Hub(2);
         hub.join(fakeSocket(), "v1", null);

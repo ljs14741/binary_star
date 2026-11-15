@@ -122,6 +122,8 @@ export class Hub {
                 if (name === member.name) return;
                 member.lastName = now;
                 member.name = name;
+                // 아직 묶음으로 안 나간 입장 소식에도 별명을 넣음 (별명이 입장보다 먼저 도착해 버려지는 것 방지)
+                for (const j of member.hill.joined) if (j.id === member.id) j.n = name;
                 this.broadcastHill(member.hill, { t: "name", id: member.id, n: name });
                 break;
             }

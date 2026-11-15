@@ -140,6 +140,7 @@ export class HillScene {
     private ground: THREE.Mesh;
     private scenery: Scenery;
     private people = new Map<number, Person>();
+    private pendingNames = new Map<number, string | null>(); // 사람이 화면에 생기기 전에 온 별명
     private meId: number | null = null;
     private texCache = new Map<string, Record<CreatureKind, THREE.Texture>>();
     private glowMe: THREE.Texture;
@@ -859,9 +860,11 @@ export class HillScene {
             p = { id: m.id, group, body, glow, pal, target: new THREE.Vector2(m.x, m.z), pos: new THREE.Vector2(m.x, m.z), pose: m.p, bob: Math.random() * 6.28, nextBlink: now + 2 + Math.random() * 4, blinkUntil: 0, lookUntil: 0, happyUntil: 0, walkUntil: 0, waveUntil: 0, hearts: [], name: null, tag: null };
             this.people.set(m.id, p);
             this.applyLook(p);
-            if (m.n !== undefined) this.setName(m.id, m.n);
+            const name = m.n ?? this.pendingNames.get(m.id) ?? null;
+            this.pendingNames.delete(m.id);
+            if (name) this.setName(m.id, name);
         } else {
-            if (m.n !== undefined && m.n !== p.name) this.setName(m.id, m.n);
+            if (m.n && m.n !== p.name) this.setName(m.id, m.n);
             p.target.set(m.x, m.z);
             if (snap) p.pos.set(m.x, m.z);
             p.pose = m.p;
@@ -881,7 +884,10 @@ export class HillScene {
     // 머리 위 별명표. 내 것은 별빛 색, 다른 사람은 흰색 조금 흐리게
     setName(id: number, name: string | null) {
         const p = this.people.get(id);
-        if (!p) return;
+        if (!p) {
+            this.pendingNames.set(id, name);
+            return;
+        }
         p.name = name;
         if (p.tag) {
             p.group.remove(p.tag);
@@ -925,6 +931,7 @@ export class HillScene {
             p.tag.material.dispose();
         }
         this.people.delete(id);
+        this.pendingNames.delete(id);
     }
 
     private place(p: Person) {
