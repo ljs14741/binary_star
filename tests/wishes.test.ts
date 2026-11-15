@@ -1,0 +1,47 @@
+import { afterAll, describe, expect, it } from "vitest";
+import { prisma } from "@/lib/prisma";
+import { cheerWish, createWish, listTonight, reportWish, WISH_PER_DAY } from "@/lib/wishes";
+
+const vk = (n: string) => `test-wish-${n}-`.padEnd(64, "x");
+const ip = (n: string) => `test-wish-ip-${n}`;
+
+afterAll(async () => {
+    await prisma.wish.deleteMany({ where: { voter_key: { startsWith: "test-wish-" } } });
+    await prisma.$disconnect();
+});
+
+describe("소원 부두", () => {
+    it("빌면 오늘 밤 하늘에 뜨고, 금칙어·링크는 막힘, 하루 3번까지", async () => {
+        const r = await createWish({ body: "  올해는 꼭 건강하게  ", lang: "ko", voterKey: vk("a"), ipHash: ip("a") });
+        expect(r.ok).toBe(true);
+        if (!r.ok) return;
+        expect(r.wish.body).toBe("올해는 꼭 건강하게");
+        const list = await listTonight(vk("a"));
+        expect(list.items.find((w) => w.id === r.wish.id)).toMatchObject({ mine: true, cheers: 0 });
+        expect(await createWish({ body: "시발 소원", lang: "ko", voterKey: vk("b"), ipHash: ip("b") })).toMatchObject({ ok: false, error: "banned" });
+        expect(await createWish({ body: "https://spam.com 와서 봐", lang: "ko", voterKey: vk("b"), ipHash: ip("b") })).toMatchObject({ ok: false, error: "url" });
+        expect(await createWish({ body: "가".repeat(61), lang: "ko", voterKey: vk("b"), ipHash: ip("b") })).toMatchObject({ ok: false, error: "too_long" });
+        for (let i = 1; i < WISH_PER_DAY; i++) expect((await createWish({ body: `소원 ${i}`, lang: "ko", voterKey: vk("a"), ipHash: ip("a") })).ok).toBe(true);
+        expect(await createWish({ body: "하나 더", lang: "ko", voterKey: vk("a"), ipHash: ip("a") })).toMatchObject({ ok: false, error: "limit" });
+    });
+
+    it("위기 낱말이 있는 소원은 하늘에 안 띄우고 안내를 보여 줌", async () => {
+        const r = await createWish({ body: "죽고 싶다", lang: "ko", voterKey: vk("c"), ipHash: ip("c") });
+        expect(r).toMatchObject({ ok: true, crisis: true });
+        if (!r.ok) return;
+        expect((await listTonight()).items.some((w) => w.id === r.wish.id)).toBe(false);
+    });
+
+    it("빌어 줄게는 한 사람 한 번, 자기 소원엔 못 함. 신고 3곳이면 내려감", async () => {
+        const r = await createWish({ body: "합격하게 해 주세요", lang: "ko", voterKey: vk("d"), ipHash: ip("d") });
+        if (!r.ok) throw new Error("create failed");
+        expect(await cheerWish(r.wish.id, vk("d"))).toMatchObject({ ok: false, error: "own" });
+        expect(await cheerWish(r.wish.id, vk("e"))).toEqual({ ok: true, cheers: 1 });
+        expect(await cheerWish(r.wish.id, vk("e"))).toMatchObject({ ok: false, error: "dup" });
+        expect(await reportWish(r.wish.id, ip("r1"))).toEqual({ ok: true, hidden: false });
+        expect(await reportWish(r.wish.id, ip("r1"))).toMatchObject({ ok: false, error: "dup" });
+        await reportWish(r.wish.id, ip("r2"));
+        expect(await reportWish(r.wish.id, ip("r3"))).toEqual({ ok: true, hidden: true });
+        expect((await listTonight()).items.some((w) => w.id === r.wish.id)).toBe(false);
+    });
+});

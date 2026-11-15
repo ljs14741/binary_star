@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Coffee, Smile, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Coffee, MoonStar, Smile, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
 import type { SkyData } from "@/lib/hill";
 import type { StoryView } from "@/lib/stories";
 import { EMOTES, HILL_CAP, type Gesture, type StarEvent } from "@/lib/realtime/protocol";
@@ -20,6 +20,8 @@ import { setSoundPref, Sound, soundPref } from "@/lib/sound";
 import { useHillSocket } from "./useHillSocket";
 import ShareSheet from "@/components/ShareSheet";
 import DonorWall from "@/components/DonorWall";
+import CrisisNotice from "@/components/CrisisNotice";
+import { WishCompose, WishView, type WishItem } from "./WishDialogs";
 import { SISTER_SITES, siteName, sisterUrl } from "@/lib/site";
 
 type Props = { initialTotal: number };
@@ -102,6 +104,21 @@ function Hill3D({ initialTotal }: Props) {
     const [helpOpen, setHelpOpen] = useState(false);
     const [donateOpen, setDonateOpen] = useState(false);
     const [emoteOpen, setEmoteOpen] = useState(false);
+    // 소원 부두
+    const [wishOpen, setWishOpen] = useState(false);
+    const [wishTapped, setWishTapped] = useState<number | null>(null);
+    const [wishCrisis, setWishCrisis] = useState(false);
+    const [wishes, setWishes] = useState<{ count: number; items: WishItem[] }>({ count: 0, items: [] });
+    const loadWishes = useCallback(() => {
+        void api<{ count: number; items: WishItem[] }>("/api/wishes").then((r) => {
+            if (r.ok) setWishes({ count: r.count, items: r.items });
+        });
+    }, []);
+    useEffect(() => {
+        loadWishes();
+        const iv = setInterval(loadWishes, 60_000);
+        return () => clearInterval(iv);
+    }, [loadWishes]);
     // 헤더·글쓰기에서 별명을 바꾸면 언덕 이름표도 바로 바뀜
     useEffect(() => {
         const send = () => bridge.send({ t: "name", n: getNickname() || null });
@@ -141,6 +158,10 @@ function Hill3D({ initialTotal }: Props) {
         flashTimer.current = setTimeout(() => setToastLine(null), 2600);
     }, []);
     const shownTotal = status === "open" ? total : initialTotal;
+    // 오늘 밤 소원들을 하늘 풍등으로
+    useEffect(() => {
+        sceneRef.current?.setSkyWishes(wishes.items);
+    }, [wishes, sky]);
     // 혼자거나 둘뿐이면 불 둘레에 그림자 요정을 앉혀 덜 쓸쓸하게
     useEffect(() => {
         sceneRef.current?.setGhosts(shownTotal <= 1 ? 3 : shownTotal === 2 ? 2 : shownTotal === 3 ? 1 : 0);
@@ -192,6 +213,9 @@ function Hill3D({ initialTotal }: Props) {
                 onSfx: (name) => sound.sfx(name),
                 onGesture: (g) => bridge.send({ t: "gesture", g }),
                 onGift: (to) => bridge.send({ t: "gift", to }),
+                wishLabel: t("wish_label"),
+                onWishArrive: () => setWishOpen(true),
+                onWishTap: (id) => setWishTapped(id),
             });
         } catch (e) {
             console.warn("[hill] 3D 실패", e);
@@ -213,6 +237,9 @@ function Hill3D({ initialTotal }: Props) {
             },
             onGift: (from, to) => {
                 if (from !== bridge.meId) scene.gift(from, to);
+            },
+            onLantern: (id) => {
+                if (id !== bridge.meId) scene.launchLantern(id);
             },
             onName: (id, n) => scene.setName(id, n),
             onStar: (e: StarEvent) => {
@@ -371,6 +398,10 @@ function Hill3D({ initialTotal }: Props) {
                         )}
                     </AnimatePresence>
                 </div>
+                {/* 소원 부두: 누르면 내 요정이 부두로 걸어가 달을 보고 소원 창이 열림 */}
+                <button onClick={() => (sceneRef.current ? sceneRef.current.goWish() : setWishOpen(true))} aria-label={t("wish_button")} title={t("wish_button")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
+                    <MoonStar size={16} />
+                </button>
                 {/* 친구 부르기: 사이트 첫 화면 링크 공유 */}
                 <button onClick={() => setShareOpen(true)} aria-label={t("hill_share")} title={t("hill_share")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
                     <Share2 size={16} />
@@ -401,9 +432,30 @@ function Hill3D({ initialTotal }: Props) {
                     <p className="text-[11px] text-dim">{t("donate_qr")}</p>
                 </div>
             </BottomSheet>
+            <WishCompose
+                open={wishOpen}
+                count={wishes.count}
+                onClose={() => setWishOpen(false)}
+                onSent={(crisis) => {
+                    setWishOpen(false);
+                    if (bridge.meId != null) sceneRef.current?.launchLantern(bridge.meId);
+                    bridge.send({ t: "lantern" });
+                    flash(t("wish_sent"));
+                    if (crisis) setWishCrisis(true);
+                    setTimeout(loadWishes, 1500);
+                }}
+            />
+            <WishView
+                wish={wishes.items.find((w) => w.id === wishTapped) ?? null}
+                onClose={() => setWishTapped(null)}
+                onCheered={(id, cheers) => setWishes((s) => ({ ...s, items: s.items.map((w) => (w.id === id ? { ...w, cheers, cheered: true } : w)) }))}
+            />
+            <BottomSheet open={wishCrisis} onClose={() => setWishCrisis(false)} title={t("wish_title")}>
+                <CrisisNotice />
+            </BottomSheet>
             <BottomSheet open={helpOpen} onClose={() => setHelpOpen(false)} title={t("help_title")}>
                 <ul className="space-y-2.5 text-[14px] leading-relaxed text-ink/90">
-                    {(["help_1", "help_2", "help_3", "help_4", "help_5", "help_6"] as const).map((k) => (
+                    {(["help_1", "help_2", "help_3", "help_4", "help_5", "help_6", "help_7"] as const).map((k) => (
                         <li key={k} className="flex gap-2">
                             <Sparkles size={14} className="mt-1 shrink-0 text-star" />
                             <span>{t(k)}</span>
@@ -466,12 +518,12 @@ function Hill3D({ initialTotal }: Props) {
             </div>
 
             {/* 아래: 나도 한마디 */}
-            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-4 pb-4">
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-1.5 px-4 pb-2.5 landscape:gap-2 landscape:pb-4">
                 <Link href={langPath(lang, room ? `/room/${room.slug}/write` : rooms[0] ? `/room/${rooms[0].slug}/write` : "")} className="btn-star pointer-events-auto flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold">
                     <PenLine size={15} /> {t("hill_write")}
                 </Link>
-                {/* 세로(폰)에선 글쓰기 버튼만 (아래 안내는 숨김) */}
-                <a href="#rooms" className="pointer-events-auto hidden items-center gap-1 text-[12px] text-dim landscape:flex">
+                {/* 아래에 주제 방이 더 있다는 안내 (폰에서도 보이게) */}
+                <a href="#rooms" className="pointer-events-auto flex items-center gap-1 text-[11px] text-dim landscape:text-[12px]">
                     {t("hill_scroll")} <ChevronDown size={14} className="animate-bounce" />
                 </a>
             </div>

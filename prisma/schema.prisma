@@ -158,3 +158,42 @@ model donation {
 
   @@index([donated_at])
 }
+
+// 소원 부두: 달에게 비는 한 줄 소원 (익명, 그날 밤만 하늘에 뜸)
+model wish {
+  id           Int          @id @default(autoincrement())
+  body         String       @db.VarChar(160)
+  lang         String       @db.VarChar(8)
+  voter_key    String       @db.VarChar(64)
+  ip_hash      String?      @db.VarChar(64)
+  kst_day      String       @db.VarChar(10) // 한국 날짜 YYYY-MM-DD (그날 밤 소원)
+  status       String       @default("public") @db.VarChar(16) // public | private(위기 낱말) | hidden(신고·관리자)
+  cheer_count  Int          @default(0)
+  report_count Int          @default(0)
+  created_at   DateTime     @default(now()) @db.Timestamp(0)
+  cheers       wish_cheer[]
+  reports      wish_report[]
+
+  @@index([kst_day, status])
+  @@index([voter_key, kst_day])
+}
+
+model wish_cheer {
+  id         Int      @id @default(autoincrement())
+  wish_id    Int
+  voter_key  String   @db.VarChar(64)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  wish       wish     @relation(fields: [wish_id], references: [id], onDelete: Cascade)
+
+  @@unique([wish_id, voter_key])
+}
+
+model wish_report {
+  id         Int      @id @default(autoincrement())
+  wish_id    Int
+  ip_hash    String   @db.VarChar(64)
+  created_at DateTime @default(now()) @db.Timestamp(0)
+  wish       wish     @relation(fields: [wish_id], references: [id], onDelete: Cascade)
+
+  @@unique([wish_id, ip_hash])
+}

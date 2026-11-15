@@ -25,6 +25,7 @@ export type ClientMsg =
     | { t: "gesture"; g: Gesture }
     | { t: "name"; n: string | null }
     | { t: "gift"; to: number } // 다른 요정에게 마음 보내기
+    | { t: "lantern" } // 소원 부두에서 풍등 띄움 (소원 글은 HTTP 로 따로 저장)
     | { t: "ping" };
 
 export type StarEvent = { kind: "born" | "glow" | "dim"; storyId: number; roomSlug: string; count: number; lang: string; from?: number };
@@ -37,6 +38,7 @@ export type ServerMsg =
     | { t: "gesture"; id: number; g: Gesture }
     | { t: "name"; id: number; n: string | null }
     | { t: "gift"; from: number; to: number }
+    | { t: "lantern"; id: number }
     | { t: "star"; e: StarEvent }
     | { t: "count"; total: number; countries: Record<string, number> }
     | { t: "daily"; e: DailyEvent }

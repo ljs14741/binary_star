@@ -155,6 +155,34 @@ export function creatureTexture(kind: CreatureKind, pal: Palette): THREE.Texture
     return makeTexture(c);
 }
 
+// 풍등: 아래가 좁은 종이등, 안쪽에서 주황빛
+export function lanternTexture(): THREE.Texture {
+    const c = canvas(64, 80);
+    const g = c.getContext("2d")!;
+    const halo = g.createRadialGradient(32, 42, 4, 32, 42, 34);
+    halo.addColorStop(0, "rgba(255,190,110,0.55)");
+    halo.addColorStop(1, "rgba(255,190,110,0)");
+    g.fillStyle = halo;
+    g.fillRect(0, 0, 64, 80);
+    const body = g.createLinearGradient(0, 18, 0, 66);
+    body.addColorStop(0, "#ffe6b0");
+    body.addColorStop(0.6, "#ffb45e");
+    body.addColorStop(1, "#ff8a3d");
+    g.fillStyle = body;
+    g.beginPath();
+    g.moveTo(20, 18);
+    g.quadraticCurveTo(32, 12, 44, 18);
+    g.lineTo(41, 62);
+    g.quadraticCurveTo(32, 66, 23, 62);
+    g.closePath();
+    g.fill();
+    g.fillStyle = "rgba(255,250,220,0.9)";
+    g.beginPath();
+    g.ellipse(32, 60, 4, 2.5, 0, 0, Math.PI * 2);
+    g.fill();
+    return makeTexture(c);
+}
+
 function star5(g: CanvasRenderingContext2D, x: number, y: number, R: number, r: number) {
     g.beginPath();
     for (let i = 0; i < 10; i++) {

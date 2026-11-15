@@ -5,6 +5,7 @@ import { flagEmoji, formatDate } from "@/lib/format";
 import AdminActions from "./AdminActions";
 import TopicSwap from "./TopicSwap";
 import AdminDonations from "./AdminDonations";
+import AdminWishes from "./AdminWishes";
 import AdminLogin from "./AdminLogin";
 import AdminRemember from "./AdminRemember";
 
@@ -114,6 +115,9 @@ export default async function AdminPage({ params, searchParams }: P) {
 
             <h2 className="mt-6 text-sm font-semibold text-ink">이번 달 주제 교체</h2>
             <TopicSwap plan={plan} slots={TOPIC_SLOTS} adminKey={adminKey} />
+
+            <h2 className="mt-6 text-sm font-semibold text-ink">소원 부두 (최근 60개)</h2>
+            <AdminWishes adminKey={adminKey} />
 
             <h2 className="mt-6 text-sm font-semibold text-ink">후원 내역 (카카오페이 받은 것 직접 입력)</h2>
             <AdminDonations adminKey={adminKey} />

@@ -9,6 +9,7 @@ export type HillHandlers = {
     onGesture?: (id: number, g: Gesture) => void;
     onName?: (id: number, n: string | null) => void;
     onGift?: (from: number, to: number) => void;
+    onLantern?: (id: number) => void;
     onStar?: (e: StarEvent) => void;
     onDaily?: (e: DailyEvent) => void;
 };
@@ -52,6 +53,9 @@ export class HillBridge {
     }
     gesture(id: number, g: Gesture) {
         this.handlers.onGesture?.(id, g);
+    }
+    lantern(id: number) {
+        this.handlers.onLantern?.(id);
     }
     gift(from: number, to: number) {
         this.handlers.onGift?.(from, to);
@@ -119,6 +123,9 @@ export function useHillSocket(enabled: boolean) {
                         break;
                     case "gesture":
                         b.gesture(msg.id, msg.g);
+                        break;
+                    case "lantern":
+                        b.lantern(msg.id);
                         break;
                     case "gift":
                         b.gift(msg.from, msg.to);

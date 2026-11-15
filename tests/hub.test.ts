@@ -89,6 +89,18 @@ describe("언덕 허브", () => {
         expect(a.log.length).toBe(n);
     });
 
+    it("풍등은 같은 언덕에 알림 (몸짓과 같은 간격 제한)", () => {
+        const hub = new Hub(150);
+        const a = fakeSocket(), b = fakeSocket();
+        const ma = hub.join(a, "voter-la", "KR");
+        hub.join(b, "voter-lb", "KR");
+        hub.handle(ma, JSON.stringify({ t: "lantern" }));
+        expect(last(b)).toEqual({ t: "lantern", id: ma.id });
+        const n = b.log.length;
+        hub.handle(ma, JSON.stringify({ t: "lantern" }));
+        expect(b.log.length).toBe(n);
+    });
+
     it("정원이 차면 다음 언덕으로", () => {
         const hub = new Hub(2);
         hub.join(fakeSocket(), "v1", null);

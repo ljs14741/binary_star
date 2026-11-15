@@ -9,7 +9,7 @@ import type { Lang } from "@/lib/i18n/config";
 import type { Gesture, MemberPublic, Pose, StarEvent } from "@/lib/realtime/protocol";
 import { FIRE_KEEP_OUT, FIRE_POS, HILL_HALF_D, HILL_HALF_W } from "@/lib/realtime/protocol";
 import type { Sfx } from "@/lib/sound";
-import { CREATURE_KINDS, creatureTexture, glowTexture, heartTexture, ME_PALETTE, PALETTES, textTexture, wrapTitle, type CreatureKind, type Palette } from "./sprites";
+import { CREATURE_KINDS, creatureTexture, glowTexture, heartTexture, lanternTexture, ME_PALETTE, PALETTES, textTexture, wrapTitle, type CreatureKind, type Palette } from "./sprites";
 import { assignRooms, ZODIAC, type Shape } from "./constellations";
 import { Scenery } from "./scenery";
 import { azDelta, type Cell, DOME_R, fromAngles, hfovOf, ringLayout, SKY_ORIGIN, SKY_V_CENTER, starAlpha, starPoint, starSize } from "./sky";
@@ -30,6 +30,10 @@ export type SceneOpts = {
     onGesture: (g: Gesture) => void;
     // 다른 요정을 눌러 마음 보내기
     onGift: (to: number) => void;
+    // 소원 부두
+    wishLabel: string; // 부두 이름표
+    onWishArrive: () => void; // 내 요정이 부두 끝에 도착 (소원 창 열기)
+    onWishTap: (id: number) => void; // 하늘에 뜬 남의 풍등을 누름
     reduceMotion: boolean;
 };
 
@@ -45,6 +49,10 @@ const EMOTE_ICON: Record<Gesture, string> = { wave: "👋", heart: "💛", pat: 
 const GIFT_SEC = 0.9;
 const MOON_AZ = -15, MOON_ELEV = 33; // 달 방위·고도(도). 바다 달빛 길(scenery)도 같은 방위
 const PORTRAIT_CAM_FWD = 3.2; // 세로 화면에서 카메라가 섬 쪽으로 다가가는 거리
+// 소원 부두: 모닥불 왼쪽 앞, 달 쪽으로 뻗은 짧은 나무 부두. 요정이 서는 자리(언덕 걷기 범위 안)와 달 방향
+const WISH_SPOT = { x: -3.2, z: -4.3 };
+const MOON_DIR = { x: Math.sin(MOON_AZ * (Math.PI / 180)), z: -Math.cos(MOON_AZ * (Math.PI / 180)) };
+const DOCK_LEN = 3.4;
 const TAG_H = 0.28, TAG_Y = 1.0; // 별명표 높이·자리(요정 머리 위)
 const ORBIT_R = SKY_ORIGIN.z - FIRE_POS.z; // 카메라가 모닥불 둘레를 도는 반지름 (정면일 때 SKY_ORIGIN 자리)
 const DEG = Math.PI / 180;
@@ -158,6 +166,12 @@ export class HillScene {
     private gifts: { sprite: THREE.Sprite; from: number; to: number; born: number }[] = [];
     // 혼자일 때 불 둘레에 앉아 있는 흐린 그림자 요정 (사람 아님: 이름·터치·인원 수 없음)
     private ghosts: { s: THREE.Sprite; phase: number }[] = [];
+    // 소원 부두
+    private wishPending = false; // 부두로 걸어가는 중
+    private lanternTex = lanternTexture();
+    private lanterns: { s: THREE.Sprite; start: THREE.Vector3; born: number; sway: number }[] = []; // 막 띄운 풍등 (땅 좌표)
+    private skyWishes: { id: number; s: THREE.Sprite; phase: number }[] = []; // 오늘 밤 소원 풍등 (하늘 좌표)
+    private dockPoints: THREE.Vector3[] = []; // 부두 누르기 판정용
     private lastEmote = 0;
     private meId: number | null = null;
     private texCache = new Map<string, Record<CreatureKind, THREE.Texture>>();
@@ -224,6 +238,7 @@ export class HillScene {
         this.scenery = new Scenery({ reduceMotion: opts.reduceMotion, isMobile }, FIRE_POS.x, FIRE_POS.z, hillHeight(FIRE_POS.x, FIRE_POS.z));
         this.scene.add(this.scenery.group);
         this.sky.add(this.scenery.sky);
+        this.scene.add(this.makeDock());
 
         // 달: 정면 왼쪽 별자리 칸 사이(az -15), 별자리 띠 높이(고도 33). 작게 해서 이름표·문장 카드·칸과 안 겹치고, 폰 왼쪽 가장자리 안에 들어옴
         const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,236,196"), transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending }));
@@ -812,6 +827,120 @@ export class HillScene {
         p.bubble = { sprite: sp, born: this.clock.getElapsedTime() };
     }
 
+    // 소원 부두: 나무 판자 + 기둥 + 끝의 등불 + 이름표
+    private makeDock(): THREE.Group {
+        const g = new THREE.Group();
+        const y0 = hillHeight(WISH_SPOT.x, WISH_SPOT.z) + 0.08;
+        const ang = Math.atan2(MOON_DIR.x, MOON_DIR.z);
+        const plankMat = new THREE.MeshBasicMaterial({ color: "#4a3324" });
+        const plankMat2 = new THREE.MeshBasicMaterial({ color: "#3d2a1d" });
+        const postMat = new THREE.MeshBasicMaterial({ color: "#2b1d14" });
+        const at = (d: number) => new THREE.Vector3(WISH_SPOT.x + MOON_DIR.x * d, y0, WISH_SPOT.z + MOON_DIR.z * d);
+        for (let d = 0, i = 0; d <= DOCK_LEN; d += 0.26, i++) {
+            const p = at(d);
+            const plank = new THREE.Mesh(new THREE.BoxGeometry(1.15, 0.06, 0.22), i % 2 ? plankMat2 : plankMat);
+            plank.position.copy(p);
+            plank.rotation.y = ang;
+            g.add(plank);
+        }
+        // 다리 기둥: 판자 아래로 땅(또는 물)까지
+        for (const d of [0.4, 1.6, 2.8]) {
+            for (const side of [-1, 1]) {
+                const p = at(d);
+                const px = p.x + Math.cos(ang) * 0.42 * side, pz = p.z - Math.sin(ang) * 0.42 * side;
+                const bottom = Math.min(hillHeight(px, pz), y0) - 0.6;
+                const h = y0 - bottom;
+                const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, h, 5), postMat);
+                post.position.set(px, bottom + h / 2, pz);
+                g.add(post);
+            }
+        }
+        // 끝의 등불 기둥
+        const end = at(DOCK_LEN);
+        const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 1.3, 6), postMat);
+        pole.position.set(end.x, y0 + 0.65, end.z);
+        g.add(pole);
+        const lamp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.lanternTex, transparent: true, depthWrite: false }));
+        lamp.scale.set(0.46, 0.57, 1);
+        lamp.position.set(end.x, y0 + 1.42, end.z);
+        g.add(lamp);
+        const lampGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,190,110"), transparent: true, opacity: 0.55, depthWrite: false, blending: THREE.AdditiveBlending }));
+        lampGlow.scale.set(2.2, 2.2, 1);
+        lampGlow.position.copy(lamp.position);
+        g.add(lampGlow);
+        // 이름표
+        const t = textTexture(`🏮 ${this.opts.wishLabel}`, { size: 44, color: "#ffe2b0", font: "700", pad: 20 });
+        const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: t.tex, transparent: true, depthWrite: false, opacity: 0.8 }));
+        label.scale.set(0.46 * t.aspect, 0.46, 1);
+        label.center.set(0.5, 0);
+        label.position.set(end.x, y0 + 1.85, end.z);
+        g.add(label);
+        this.dockPoints = [at(0.3), at(DOCK_LEN * 0.5), at(DOCK_LEN), new THREE.Vector3(end.x, y0 + 1.5, end.z)];
+        return g;
+    }
+
+    // 부두 끝으로 걸어가기 (버튼·부두 누르기). 도착하면 달을 보고 onWishArrive
+    goWish() {
+        const me = this.meId != null ? this.people.get(this.meId) : null;
+        if (!me) {
+            this.opts.onWishArrive();
+            return;
+        }
+        this.walkTo(WISH_SPOT.x, WISH_SPOT.z, false);
+        this.wishPending = true;
+    }
+
+    // 도착: 카메라가 달 쪽으로 돌고 요정이 달을 올려다봄
+    private arriveWish(now: number) {
+        this.wishPending = false;
+        const full = Math.PI * 2;
+        let t = MOON_AZ * DEG;
+        while (t - this.view > full / 2) t -= full;
+        while (t - this.view < -full / 2) t += full;
+        this.viewTarget = t;
+        this.viewVel = 0;
+        const me = this.meId != null ? this.people.get(this.meId) : null;
+        if (me) me.lookUntil = now + 3;
+        this.opts.onWishArrive();
+    }
+
+    // 풍등 띄우기: 그 요정 머리 위에서 달 쪽으로 천천히 올라가며 작아짐
+    launchLantern(id: number) {
+        const p = this.people.get(id);
+        if (!p) return;
+        p.lookUntil = this.clock.getElapsedTime() + 3;
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.lanternTex, transparent: true, depthWrite: false, opacity: 0 }));
+        const start = p.group.position.clone().add(new THREE.Vector3(0, 1.1, 0));
+        s.position.copy(start);
+        s.scale.set(0.7, 0.86, 1);
+        this.scene.add(s);
+        this.lanterns.push({ s, start, born: this.clock.getElapsedTime(), sway: Math.random() * 6 });
+    }
+
+    // 오늘 밤 소원들: 하늘 낮은 곳(달 둘레)에 떠 있는 작은 풍등. 누르면 그 소원
+    setSkyWishes(items: { id: number }[]) {
+        const keep = new Set(items.slice(0, 20).map((w) => w.id));
+        this.skyWishes = this.skyWishes.filter((w) => {
+            if (keep.has(w.id)) return true;
+            this.sky.remove(w.s);
+            w.s.material.dispose();
+            return false;
+        });
+        for (const w of items.slice(0, 20)) {
+            if (this.skyWishes.some((x) => x.id === w.id)) continue;
+            // id 로 자리를 정해 새로고침해도 같은 자리
+            const h = Math.sin(w.id * 12.9898) * 43758.5453;
+            const r1 = h - Math.floor(h), r2 = (h * 7.13) % 1 < 0 ? ((h * 7.13) % 1) + 1 : (h * 7.13) % 1;
+            const az = MOON_AZ + (r1 * 2 - 1) * 32, el = 14 + r2 * 22; // 달 둘레에 모아 폰 화면에도 보이게
+            const p = fromAngles(az, el, DOME_R * 0.92);
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.lanternTex, transparent: true, depthWrite: false, opacity: 0.9 }));
+            s.position.set(p.x, p.y, p.z);
+            s.scale.set(1.6, 2.0, 1);
+            this.sky.add(s);
+            this.skyWishes.push({ id: w.id, s, phase: r1 * 6.28 });
+        }
+    }
+
     // 그림자 요정 수 맞추기 (진짜 사람이 늘면 줄임)
     setGhosts(n: number) {
         const seats = [200, 340, 150, 30].map((deg) => deg * DEG); // 불 양옆·뒤 (카메라와 불 사이는 피함)
@@ -1182,6 +1311,17 @@ export class HillScene {
             }
             return;
         }
+        // 소원 부두를 누르면 부두 끝으로 걸어감
+        if (this.nearScreen(this.dockPoints, cx, cy, rect, 34)) {
+            this.goWish();
+            return;
+        }
+        // 하늘에 뜬 오늘 밤 소원 풍등
+        const wishHit = this.skyWishAt(cx, cy, rect);
+        if (wishHit != null) {
+            this.opts.onWishTap(wishHit);
+            return;
+        }
         // 땅(섬)을 누르면 거기로 걸어감. 별·별자리 판정보다 먼저 (폰에서 요정 근처를 눌러도 별자리로 안 넘어가게)
         const ground = this.groundAt(cx, cy);
         if (ground) {
@@ -1220,6 +1360,30 @@ export class HillScene {
     }
 
     // 내 요정 근처를 눌렀나 (화면에서 px 안)
+    private nearScreen(points: THREE.Vector3[], cx: number, cy: number, rect: DOMRect, px: number): boolean {
+        const v = new THREE.Vector3();
+        return points.some((p) => {
+            v.copy(p).project(this.camera);
+            if (v.z > 1) return false;
+            return Math.hypot(cx - (rect.left + ((v.x + 1) / 2) * rect.width), cy - (rect.top + ((1 - v.y) / 2) * rect.height)) < px;
+        });
+    }
+
+    private skyWishAt(cx: number, cy: number, rect: DOMRect): number | null {
+        let best: number | null = null, bestD = 30;
+        const v = new THREE.Vector3();
+        for (const w of this.skyWishes) {
+            v.copy(w.s.position).add(this.sky.position).project(this.camera);
+            if (v.z > 1) continue;
+            const d = Math.hypot(cx - (rect.left + ((v.x + 1) / 2) * rect.width), cy - (rect.top + ((1 - v.y) / 2) * rect.height));
+            if (d < bestD) {
+                bestD = d;
+                best = w.id;
+            }
+        }
+        return best;
+    }
+
     // 내 요정이 아닌 가장 가까운 요정 (손가락 36px 안)
     private otherTapped(cx: number, cy: number, rect: DOMRect, px = 36): number | null {
         let best: number | null = null, bestD = px;
@@ -1250,6 +1414,7 @@ export class HillScene {
     private walkTo(x: number, z: number, dragging: boolean) {
         const me = this.meId != null ? this.people.get(this.meId) : null;
         if (!me) return;
+        this.wishPending = false;
         me.target.set(x, z);
         me.pose = "stand";
         this.showWalkMark(x, z);
@@ -1504,6 +1669,31 @@ export class HillScene {
             });
         }
         this.layoutTags(dt);
+        // 소원 부두 도착
+        if (this.wishPending && this.meId != null) {
+            const me = this.people.get(this.meId);
+            if (me && me.pos.distanceTo(me.target) < 0.05) this.arriveWish(now);
+        }
+        // 막 띄운 풍등: 7초 동안 달 쪽 하늘로
+        this.lanterns = this.lanterns.filter((l) => {
+            const t = (now - l.born) / 7;
+            if (t >= 1) {
+                this.scene.remove(l.s);
+                l.s.material.dispose();
+                return false;
+            }
+            const e = t * (2 - t);
+            l.s.position.set(l.start.x + MOON_DIR.x * e * 9 + Math.sin(now * 1.3 + l.sway) * 0.15, l.start.y + e * 11, l.start.z + MOON_DIR.z * e * 9);
+            const sc = 1 - t * 0.45;
+            l.s.scale.set(0.7 * sc, 0.86 * sc, 1);
+            l.s.material.opacity = t < 0.08 ? t / 0.08 : t > 0.8 ? (1 - t) / 0.2 : 1;
+            return true;
+        });
+        for (const w of this.skyWishes) {
+            if (this.opts.reduceMotion) break;
+            w.s.material.opacity = 0.75 + 0.2 * Math.sin(now * 1.1 + w.phase);
+            w.s.position.y += Math.sin(now * 0.6 + w.phase) * 0.004;
+        }
         // 그림자 요정: 천천히 나타나 아주 흐리게 숨 쉬듯
         for (const g of this.ghosts) {
             const m = g.s.material;

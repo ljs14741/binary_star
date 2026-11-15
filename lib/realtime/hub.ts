@@ -114,6 +114,12 @@ export class Hub {
                 this.broadcastHill(member.hill, { t: "gesture", id: member.id, g: msg.g as Gesture });
                 break;
             }
+            case "lantern": {
+                if (now - member.lastGesture < GESTURE_MIN_INTERVAL) return;
+                member.lastGesture = now;
+                this.broadcastHill(member.hill, { t: "lantern", id: member.id });
+                break;
+            }
             case "gift": {
                 // 같은 언덕의 다른 사람에게만. 몸짓과 같은 간격 제한
                 if (typeof msg.to !== "number" || msg.to === member.id) return;
