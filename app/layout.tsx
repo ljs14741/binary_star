@@ -4,7 +4,6 @@ import "./globals.css";
 import { HTML_LANG, isLang, type Lang } from "@/lib/i18n/config";
 import Sky from "@/components/Sky";
 import GoogleAnalytics from "@/components/GoogleAnalytics";
-import AdSenseAuto from "@/components/AdSlot";
 
 export const metadata: Metadata = {
     title: "별말씀",
@@ -20,7 +19,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             <body className="antialiased">
                 <Sky />
                 <GoogleAnalytics />
-                <AdSenseAuto />
                 {children}
             </body>
         </html>
