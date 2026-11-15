@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown, Hand, PenLine, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, Hand, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
 import type { SkyData } from "@/lib/hill";
 import type { StoryView } from "@/lib/stories";
 import { HILL_CAP, type StarEvent } from "@/lib/realtime/protocol";
@@ -11,12 +11,14 @@ import { useLang, useT } from "@/components/I18nProvider";
 import BottomSheet from "@/components/BottomSheet";
 import StoryCard from "@/components/StoryCard";
 import Stargazer from "@/components/Stargazer";
-import { api, getMineIds, langPath } from "@/lib/client";
+import { api, getMineIds, langPath, siteOrigin } from "@/lib/client";
 import { formatNumber } from "@/lib/format";
 import { HillScene, hasWebGL, type HighlightInfo } from "./HillScene";
 import { assignRooms, ZODIAC } from "./constellations";
 import { setSoundPref, Sound, soundPref } from "@/lib/sound";
 import { useHillSocket } from "./useHillSocket";
+import ShareSheet from "@/components/ShareSheet";
+import { siteName } from "@/lib/site";
 
 type Props = { initialTotal: number };
 
@@ -86,6 +88,7 @@ function Hill3D({ initialTotal }: Props) {
     const { sound, on: soundOn, armed: soundArmed, arm: armSound, toggle: toggleSound } = useSound();
     const sitTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const [sky, setSky] = useState<SkyData | null>(null);
+    const [shareOpen, setShareOpen] = useState(false);
     const [index, setIndex] = useState(0);
     const [highlight, setHighlight] = useState<HighlightInfo>(null);
     const [story, setStory] = useState<StoryView | null>(null);
@@ -311,7 +314,16 @@ function Hill3D({ initialTotal }: Props) {
                 <button onClick={() => sceneRef.current?.waveMe()} aria-label={t("hill_wave")} title={t("hill_wave")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95" disabled={status !== "open"}>
                     <Hand size={16} />
                 </button>
+                {/* 친구 부르기: 사이트 첫 화면 링크 공유 */}
+                <button onClick={() => setShareOpen(true)} aria-label={t("hill_share")} title={t("hill_share")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
+                    <Share2 size={16} />
+                </button>
             </div>
+            <ShareSheet
+                open={shareOpen}
+                onClose={() => setShareOpen(false)}
+                target={{ url: `${siteOrigin()}/${lang}`, title: siteName(lang), text: t("hill_share_message"), imageUrl: `${siteOrigin()}/${lang}/opengraph-image`, description: t("site_tagline") }}
+            />
 
             {/* 지금 밝아진 별의 첫 문장 (빈 별자리면 안내). 세로(폰)에선 수평선 바로 위(이름표 대신) 라 요정을 안 가림, 가로(PC)는 가운데 */}
             <div className="pointer-events-none absolute inset-x-0 flex justify-center px-5 portrait:top-[var(--hill-horizon,66%)] portrait:-translate-y-[calc(100%+8px)] landscape:top-[60%]">

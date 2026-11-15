@@ -259,6 +259,8 @@ export const ko = {
     hill_sound_hint: "화면을 누르면 소리가 켜져요",
     hill_online: "지금 {n}/{cap}명",
     hill_wave: "손 흔들기",
+    hill_share: "친구 부르기",
+    hill_share_message: "밤하늘 아래서 모르는 사람들 이야기 읽는 곳 찾았어. 같이 와 볼래?",
     hill_sound_off: "소리 끄기",
     hill_sound_on: "소리 켜기",
     hill_empty: "이 별자리엔 아직 주제가 없어요.\n새 주제를 제안하면 여기에 별이 떠요",

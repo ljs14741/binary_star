@@ -260,6 +260,8 @@ export const en: { [K in keyof typeof ko]: string } = {
     hill_sound_hint: "Tap the screen to turn on sound",
     hill_online: "{n}/{cap} here now",
     hill_wave: "Wave",
+    hill_share: "Invite a friend",
+    hill_share_message: "Found a place to read strangers' stories under the night sky. Come sit with me?",
     hill_sound_off: "Sound off",
     hill_sound_on: "Sound on",
     hill_empty: "This constellation has no room yet.\nPropose a theme and stars will rise here",

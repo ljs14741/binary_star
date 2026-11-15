@@ -260,6 +260,8 @@ export const ja: { [K in keyof typeof ko]: string } = {
     hill_sound_hint: "画面をタップすると音が出ます",
     hill_online: "いま{n}/{cap}人",
     hill_wave: "手をふる",
+    hill_share: "友だちを呼ぶ",
+    hill_share_message: "夜空の下で知らない人の話を読める場所を見つけたよ。一緒に来ない？",
     hill_sound_off: "音を消す",
     hill_sound_on: "音を出す",
     hill_empty: "この星座にはまだテーマがありません。\n新しいテーマを提案すると星が浮かびます",

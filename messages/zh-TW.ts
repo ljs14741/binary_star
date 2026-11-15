@@ -260,6 +260,8 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     hill_sound_hint: "點一下畫面就會開啟聲音",
     hill_online: "目前 {n}/{cap} 人",
     hill_wave: "揮手",
+    hill_share: "邀請朋友",
+    hill_share_message: "找到一個在夜空下讀陌生人故事的地方，要不要一起來？",
     hill_sound_off: "關閉聲音",
     hill_sound_on: "開啟聲音",
     hill_empty: "這個星座還沒有主題。\n提出新主題，星星就會在這裡升起",
