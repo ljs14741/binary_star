@@ -190,7 +190,7 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
                     onChange={(e) => changeNickname(e.target.value.slice(0, NICKNAME_MAX_LEN))}
                     placeholder={t("anonymous_name")}
                     maxLength={NICKNAME_MAX_LEN}
-                    className="glass min-w-0 flex-1 rounded-2xl px-4 py-2.5 text-[15px] text-ink placeholder:text-dim"
+                    className="glass min-w-0 flex-1 rounded-2xl px-4 py-2.5 text-[16px] text-ink placeholder:text-dim"
                 />
                 <button type="button" onClick={() => changeNickname(randomNickname(lang, Math.random, nickname))} aria-label={t("nickname_reroll")} title={t("nickname_reroll")} className="glass flex shrink-0 items-center gap-1.5 rounded-2xl px-3 text-[13px] text-muted active:scale-95">
                     <Dices size={16} /> {t("nickname_reroll")}
