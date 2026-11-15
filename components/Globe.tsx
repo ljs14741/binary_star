@@ -95,6 +95,21 @@ function borderSegments(): Float32Array {
     return borderCache;
 }
 
+// 얇은 고리 (물결용)
+function ringTexture(): THREE.Texture {
+    const c = document.createElement("canvas");
+    c.width = c.height = 128;
+    const g = c.getContext("2d")!;
+    g.strokeStyle = "rgba(255,255,255,1)";
+    g.lineWidth = 5;
+    g.beginPath();
+    g.arc(64, 64, 56, 0, Math.PI * 2);
+    g.stroke();
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+}
+
 function glowTexture(): THREE.Texture {
     const size = 128;
     const c = document.createElement("canvas");
@@ -162,14 +177,22 @@ export default function Globe({ lights }: { lights: CityLight[] }) {
         borderGeo.setAttribute("position", new THREE.BufferAttribute(borderSegments(), 3));
         scene.add(new THREE.LineSegments(borderGeo, new THREE.LineBasicMaterial({ color: 0x9aa8e8, transparent: true, opacity: 0.28 })));
 
-        // 도시 불빛
+        // 나라 불빛 (많이 올수록 크게) + 바깥으로 퍼지는 물결 두 겹
         const tex = glowTexture();
+        const ringTex = ringTexture();
         const maxCount = Math.max(1, ...lights.map((l) => l.count));
         const sprites: { s: THREE.Sprite; base: number; phase: number }[] = [];
+        const ripples: { s: THREE.Sprite; base: number; phase: number }[] = [];
         const group = new THREE.Group();
         for (const l of lights) {
             const color = l.mine ? 0xff9bb3 : 0xffd86b;
-            const base = 0.07 + 0.09 * (Math.log2(l.count + 1) / Math.log2(maxCount + 1));
+            const base = 0.1 + 0.16 * (Math.log2(l.count + 1) / Math.log2(maxCount + 1));
+            for (let k = 0; k < 2; k++) {
+                const r = new THREE.Sprite(new THREE.SpriteMaterial({ map: ringTex, color, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+                r.position.copy(latLngToVec3(l.lat, l.lng, R * 1.008));
+                group.add(r);
+                ripples.push({ s: r, base, phase: k * 0.5 + Math.random() * 0.3 });
+            }
             const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, color, transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }));
             s.position.copy(latLngToVec3(l.lat, l.lng, R * 1.01));
             s.scale.setScalar(base);
@@ -256,6 +279,12 @@ export default function Globe({ lights }: { lights: CityLight[] }) {
             for (const sp of sprites) {
                 const k = reduce ? 1 : 1 + 0.18 * Math.sin(now * 0.0016 + sp.phase);
                 sp.s.scale.setScalar(sp.base * k);
+            }
+            // 물결: 0→1 동안 커지며 옅어짐 (모션 줄임이면 안 보임)
+            for (const rp of ripples) {
+                const t = reduce ? 1 : (now * 0.00035 + rp.phase) % 1;
+                rp.s.scale.setScalar(rp.base * (0.5 + 2.6 * t));
+                (rp.s.material as THREE.SpriteMaterial).opacity = reduce ? 0 : 0.55 * (1 - t) * (1 - t);
             }
             controls.update();
             renderer.render(scene, camera);

@@ -13,7 +13,6 @@ import { api, getLastTotal, getOwnerToken, langPath, setLastTotal, setOwnerToken
 import StoryCard from "./StoryCard";
 import CrisisNotice from "./CrisisNotice";
 import { countryName, flagEmoji, formatNumber } from "@/lib/format";
-import { placeName } from "@/lib/place";
 
 const Globe = dynamic(() => import("./Globe"), { ssr: false, loading: () => <div className="mx-auto aspect-square w-full max-w-[360px] animate-pulse rounded-full bg-card" /> });
 
@@ -44,8 +43,8 @@ export default function MyPage({ token }: { token: string }) {
 
     const meUrl = `${siteOrigin()}${langPath(lang, `/me/${token}`)}`;
     const hasCrisis = data.stories.some((s) => s.moderationNote === "crisis");
-    // 공감이 온 곳 한 줄 ("서울 3 · 부산 1 · Tokyo 1")
-    const placeList = data.lights.slice(0, 5).map((l) => `${placeName(l.city, l.country, lang) || (l.country ? countryName(l.country, lang) : t("country_unknown"))} ${formatNumber(l.count, lang)}`).join(" · ");
+    // 공감이 온 곳 한 줄 ("대한민국 3 · 일본 1")
+    const placeList = data.lights.slice(0, 5).map((l) => `${l.country ? countryName(l.country, lang) : t("country_unknown")} ${formatNumber(l.count, lang)}`).join(" · ");
     const onlyCountry = data.countryCount === 1 ? data.lights.find((l) => l.country)?.country ?? null : null;
 
     return (
@@ -63,7 +62,7 @@ export default function MyPage({ token }: { token: string }) {
                 {placeList && <p className="mt-1 text-xs text-dim">{t("me_cities_line", { list: placeList })}</p>}
             </motion.section>
 
-            {/* 공감이 온 도시 불빛. 한 나라에서만 왔으면 그 나라를 크게 보여 줌 */}
+            {/* 공감이 온 나라 불빛(나라마다 하나, 많을수록 크게). 한 나라에서만 왔으면 그 나라를 크게 보여 줌 */}
             {data.lights.length > 0 && (
                 <div className="mt-4">
                     <Globe lights={data.lights} />
@@ -78,7 +77,7 @@ export default function MyPage({ token }: { token: string }) {
                         {data.lights.slice(0, 12).map((l, i) => (
                             <li key={i} className={`glass flex items-center justify-between rounded-xl px-3 py-2 ${l.mine ? "border-rose/40" : ""}`}>
                                 <span className="truncate">
-                                    {flagEmoji(l.country)} {l.city || countryName(l.country, lang)}
+                                    {flagEmoji(l.country)} {countryName(l.country, lang) ?? t("country_unknown")}
                                     {l.mine && <span className="ml-1 text-[10px] text-rose">{t("me_mine_light")}</span>}
                                 </span>
                                 <span className="ml-2 tabular-nums text-star-soft">{formatNumber(l.count, lang)}</span>

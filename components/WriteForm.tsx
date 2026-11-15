@@ -6,7 +6,6 @@ import { motion } from "framer-motion";
 import { Link2, Send, Share2, Check, KeyRound } from "lucide-react";
 import type { StoryView } from "@/lib/stories";
 import { AGE_GROUPS, NICKNAME_MAX_LEN, STORY_MAX_LEN } from "@/lib/site";
-import { KR_REGIONS, placeName } from "@/lib/place";
 import { useLang, useT } from "./I18nProvider";
 import { addMineId, api, langPath, setOwnerToken, siteOrigin } from "@/lib/client";
 import StoryCard from "./StoryCard";
@@ -35,27 +34,12 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
     const lang = useLang();
     const [body, setBody] = useState("");
     const [age, setAge] = useState<string | null>(null);
-    // 한국이면 지역 칩: 서버 추정값으로 시작, 사람이 바꿀 수 있음. null = 지역 숨김
-    const [isKr, setIsKr] = useState(false);
-    const [region, setRegion] = useState<string | null>(null);
     const [nickname, setNickname] = useState("");
     const [linkSaved, setLinkSaved] = useState(false);
     const [busy, setBusy] = useState(false);
     const [err, setErr] = useState<string | null>(null);
     const [done, setDone] = useState<Done | null>(null);
     const [share, setShare] = useState<"story" | "me" | null>(null);
-
-    useEffect(() => {
-        let alive = true;
-        api<{ country: string | null; city: string | null }>("/api/geo").then((g) => {
-            if (!alive || !g.ok || g.country !== "KR") return;
-            setIsKr(true);
-            setRegion(KR_REGIONS.some((r) => r.key === g.city) ? g.city : null);
-        }).catch(() => {});
-        return () => {
-            alive = false;
-        };
-    }, []);
 
     useEffect(() => {
         // 쓰다 만 글·마지막 별명 복구 (hydration 뒤 다음 프레임에)
@@ -83,7 +67,7 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
         if (text.length > STORY_MAX_LEN) return setErr(t("write_err_long", { max: STORY_MAX_LEN }));
         setErr(null);
         setBusy(true);
-        const r = await api<Done>("/api/stories", { method: "POST", json: { room: roomSlug, body: text, nickname: nickname.trim() || null, ageGroup: age, lang, region: isKr ? region ?? "" : undefined } });
+        const r = await api<Done>("/api/stories", { method: "POST", json: { room: roomSlug, body: text, nickname: nickname.trim() || null, ageGroup: age, lang } });
         setBusy(false);
         if (!r.ok) {
             const map: Record<string, string> = {
@@ -171,7 +155,7 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
             {rooms.length > 1 && (
                 <div className="mb-4">
                     <p className="mb-1.5 text-xs text-muted">{t("write_room_label")}</p>
-                    <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible">
                         {rooms.map((r) => (
                             <button key={r.slug} type="button" onClick={() => pickRoom(r.slug)} className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] transition ${r.slug === roomSlug ? "btn-star font-semibold" : "glass text-muted"}`}>
                                 {r.title}
@@ -215,24 +199,6 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
                     </button>
                 ))}
             </div>
-
-            {isKr && (
-                <>
-                    <p className="mb-2 mt-4 text-sm text-muted">{t("write_region")}</p>
-                    <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                        {KR_REGIONS.map((r) => (
-                            <button
-                                key={r.key}
-                                type="button"
-                                onClick={() => setRegion(region === r.key ? null : r.key)}
-                                className={`shrink-0 rounded-full px-3 py-1.5 text-sm transition ${region === r.key ? "btn-star font-semibold" : "glass text-muted"}`}
-                            >
-                                {placeName(r.key, "KR", lang)}
-                            </button>
-                        ))}
-                    </div>
-                </>
-            )}
 
             {err && <p className="mt-4 rounded-xl bg-rose/10 px-3 py-2 text-sm text-rose">{err}</p>}
 

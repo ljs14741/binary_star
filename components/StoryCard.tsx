@@ -13,7 +13,6 @@ import { useToast } from "./Toast";
 import { useDialog } from "./Dialog";
 import { api, langPath } from "@/lib/client";
 import { countryName, flagEmoji, formatNumber, excerpt, relTime } from "@/lib/format";
-import { placeName } from "@/lib/place";
 import { RISING_MIN, STORY_MAX_LEN } from "@/lib/site";
 
 type Props = {
@@ -59,7 +58,7 @@ export default function StoryCard({ story: initial, sharedFirst, onNext, onHidde
     const body = usingTranslation ? translation!.body : story.body;
     const long = body.length > 110 || body.split("\n").length > 3;
     const fromName = t(`lang_name_${story.lang}` as "lang_name_ko");
-    const where = story.country ? `${flagEmoji(story.country)} ${countryName(story.country, lang as Lang)}${story.city ? ` · ${placeName(story.city, story.country, lang as Lang)}` : ""}` : t("country_unknown");
+    const where = story.country ? `${flagEmoji(story.country)} ${countryName(story.country, lang as Lang)}` : t("country_unknown");
 
     // ----- 주인 기능 -----
     const ownerCall = async (init: Parameters<typeof api>[1], okMsg?: string) => {

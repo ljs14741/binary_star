@@ -327,6 +327,7 @@ export async function reportStory(storyId: number, voterKey: string, reason: str
 }
 
 // ---------- 내 이야기 ----------
+// 지구본 불빛 하나 = 나라 하나 (city 는 안 씀, 호환용)
 export type CityLight = { country: string | null; city: string | null; lat: number; lng: number; count: number; mine: boolean };
 export type MineResult = {
     stories: StoryView[];
@@ -346,16 +347,22 @@ export async function getMine(ownerTokenHash: string, lang: Lang): Promise<MineR
     const countries = new Set(emp.map((e) => e.country).filter(Boolean));
     const myCountry = rows.find((r) => r.country)?.country ?? null;
     const myCity = rows.find((r) => r.city)?.city ?? null;
-    const lights: CityLight[] = emp
-        .filter((e) => typeof e.lat === "number" && typeof e.lng === "number")
-        .map((e) => ({
-            country: e.country,
-            city: e.city,
-            lat: e.lat!,
-            lng: e.lng!,
-            count: e._count._all,
-            mine: !!myCity && e.city === myCity && e.country === myCountry,
-        }))
+    // 나라마다 불빛 하나. 좌표는 그 나라에서 온 공감 좌표의 평균 (도시 추정이 거칠어서 도시 단위는 안 씀)
+    const byCountry = new Map<string, { n: number; lat: number; lng: number; w: number }>();
+    for (const e of emp) {
+        if (!e.country) continue;
+        const c = byCountry.get(e.country) ?? { n: 0, lat: 0, lng: 0, w: 0 };
+        c.n += e._count._all;
+        if (typeof e.lat === "number" && typeof e.lng === "number") {
+            c.lat += e.lat * e._count._all;
+            c.lng += e.lng * e._count._all;
+            c.w += e._count._all;
+        }
+        byCountry.set(e.country, c);
+    }
+    const lights: CityLight[] = [...byCountry.entries()]
+        .filter(([, c]) => c.w > 0)
+        .map(([country, c]) => ({ country, city: null, lat: c.lat / c.w, lng: c.lng / c.w, count: c.n, mine: country === myCountry }))
         .sort((a, b) => b.count - a.count);
     return { stories, total, countryCount: countries.size, lights, myCountry, myCity };
 }

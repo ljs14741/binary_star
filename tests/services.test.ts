@@ -79,8 +79,8 @@ describe("공감", () => {
         const mine = await getMine(hashOwnerToken(r.ownerToken), "ko");
         expect(mine.total).toBe(2);
         expect(mine.countryCount).toBe(2);
-        expect(mine.lights.find((l) => l.city === "Tokyo")?.count).toBe(1);
-        expect(mine.lights.find((l) => l.city === "Seoul")?.mine).toBe(true);
+        expect(mine.lights.find((l) => l.country === "JP")?.count).toBe(1);
+        expect(mine.lights.find((l) => l.country === "KR")?.mine).toBe(true);
     });
 });
 
