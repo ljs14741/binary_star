@@ -258,4 +258,12 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     hill_sound_on: "開啟聲音",
     hill_empty: "這個星座還沒有主題。\n提出新主題，星星就會在這裡升起",
     hill_count: "{n} 個主題",
+    // 번역(AI 키) 꺼졌을 때 문구 · 오류 페이지
+    anon_notice_local: "匿名・免註冊",
+    after_public_local: "已公開",
+    about_body_local: "{site} 是在主題房間裡讀陌生人的故事、共鳴，也留下自己故事的地方。\n\n短短一句或長長一篇都可以。不需要註冊。共鳴傳來的城市會在夜晚的地球儀上亮起。\n\n把「幫我共鳴」連結傳給朋友，朋友會先讀你的故事、共鳴，然後也能留下自己的故事。\n\n任何人都能提議新主題，累積 {threshold} 個共鳴就會成為正式房間。",
+    error_title: "出了點問題",
+    error_sub: "重試仍無效的話，請稍後再來",
+    error_retry: "再試一次",
+    error_home: "回首頁",
 };

@@ -258,4 +258,12 @@ export const ja: { [K in keyof typeof ko]: string } = {
     hill_sound_on: "音を出す",
     hill_empty: "この星座にはまだテーマがありません。\n新しいテーマを提案すると星が浮かびます",
     hill_count: "テーマ{n}つ",
+    // 번역(AI 키) 꺼졌을 때 문구 · 오류 페이지
+    anon_notice_local: "匿名・登録なし",
+    after_public_local: "公開されました",
+    about_body_local: "{site}は、テーマ部屋で知らない人の話を読んで共感し、自分の話も残す場所です。\n\n短くても、とても長くても大丈夫。登録はありません。共感が届いた都市が夜の地球儀に光として灯ります。\n\n友だちに「共感して」リンクを送ると、友だちはあなたの話から読んで共感し、自分の話も残せます。\n\n新しいテーマは誰でも提案でき、共感が{threshold}件集まると正式な部屋になります。",
+    error_title: "問題が起きました",
+    error_sub: "もう一度試しても直らない場合は、しばらくしてからお越しください",
+    error_retry: "もう一度",
+    error_home: "ホームへ",
 };

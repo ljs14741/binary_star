@@ -17,7 +17,8 @@ type Done = { story: StoryView; ownerToken: string; masked: boolean; crisis: boo
 
 type RoomOpt = { slug: string; title: string };
 
-export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTitle, rooms = [] }: { roomSlug: string; roomTitle: string; rooms?: RoomOpt[] }) {
+// translate: 서버에 AI 키가 있어 자동 번역이 켜졌는지 (꺼지면 "번역돼서 보여요" 문구를 안 씀)
+export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTitle, rooms = [], translate = false }: { roomSlug: string; roomTitle: string; rooms?: RoomOpt[]; translate?: boolean }) {
     // 쓰는 중에 주제(별자리)를 바로 바꿀 수 있음. 주소도 같이 바꿔 둠
     const [roomSlug, setRoomSlug] = useState(initialSlug);
     const roomTitle = rooms.find((r) => r.slug === roomSlug)?.title ?? initialTitle;
@@ -101,7 +102,7 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
                 <motion.h1 initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="mb-1 text-xl font-semibold">
                     {t("after_title")}
                 </motion.h1>
-                <p className="mb-4 text-sm text-muted">{done.story.status === "pending" ? t("after_pending") : isPublic ? t("after_public") : t("after_private")}</p>
+                <p className="mb-4 text-sm text-muted">{done.story.status === "pending" ? t("after_pending") : isPublic ? t(translate ? "after_public" : "after_public_local") : t("after_private")}</p>
                 {done.crisis && (
                     <div className="mb-4">
                         <CrisisNotice />
@@ -204,7 +205,7 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
             <button onClick={submit} disabled={busy} className="btn-star mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full font-semibold disabled:opacity-60">
                 <Send size={16} /> {busy ? t("write_submitting") : t("write_submit")}
             </button>
-            <p className="mt-3 text-center text-[11px] text-dim">{t("anon_notice")}</p>
+            <p className="mt-3 text-center text-[11px] text-dim">{t(translate ? "anon_notice" : "anon_notice_local")}</p>
             <p className="mt-1.5 text-center text-[11px] text-dim">{t("write_edit_window")}</p>
         </div>
     );

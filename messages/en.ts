@@ -258,4 +258,12 @@ export const en: { [K in keyof typeof ko]: string } = {
     hill_sound_on: "Sound on",
     hill_empty: "This constellation has no room yet.\nPropose a theme and stars will rise here",
     hill_count: "{n} rooms",
+    // 번역(AI 키) 꺼졌을 때 문구 · 오류 페이지
+    anon_notice_local: "Anonymous · no sign-up",
+    after_public_local: "It's public",
+    about_body_local: "{site} is a place to read strangers' stories in topic rooms, feel for them, and leave your own.\n\nShort or long, both are fine. There is no sign-up. The cities your reactions came from light up on a night globe.\n\nSend a friend a “feel this” link: they read your story first, react, and can leave their own.\n\nAnyone can suggest a topic. At {threshold} reactions it becomes a room.",
+    error_title: "Something went wrong",
+    error_sub: "If retrying doesn't help, please come back in a bit",
+    error_retry: "Try again",
+    error_home: "Home",
 };
