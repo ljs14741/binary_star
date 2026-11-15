@@ -141,6 +141,7 @@ function flameTexture(frame: number): THREE.Texture {
 
 export class Scenery {
     group = new THREE.Group();
+    sky = new THREE.Group(); // 오로라처럼 하늘에 붙는 것 (HillScene 이 카메라를 따라 옮김)
     private auroraMats: THREE.ShaderMaterial[] = [];
     private seaMat: THREE.ShaderMaterial;
     private beam: THREE.Mesh;
@@ -368,7 +369,7 @@ export class Scenery {
         });
         const aurora = new THREE.Mesh(ag, mat);
         aurora.frustumCulled = false;
-        this.group.add(aurora);
+        this.sky.add(aurora);
         this.auroraMats.push(mat);
     }
 

@@ -34,6 +34,7 @@
 - Next 16 커스텀 서버: decoy httpServer + `upgradeHandler` 구조 바꾸지 말 것. 서버 코드·Prisma 스키마 바꾸면 dev 서버 재시작(`ps -eo pid,user,args` 로 binary 소유 `tsx server.ts` 만 kill. `pkill -f` 는 자기 셸까지 죽임)
 - React lint: 렌더 중 `useRef.current` 읽기·컴포넌트 정의 금지
 - 하늘 위 요소는 폰 헤더에 가림 → 고도 48도 아래. 세로 화면은 카메라가 3.2 앞
+- 카메라는 모닥불 둘레를 돎(`ORBIT_R`). 하늘 물체는 `this.sky` 그룹에 넣어야 카메라를 따라감(별 화면좌표 계산 때 `sky.position` 더함). 자리 배정도 불 둘레 원형
 - Claude 는 docker 그룹 아님, `sudo` 불가, Caddyfile 은 root 소유(수정은 `Caddyfile.new` 만들어 사용자가 cp+reload). compose(`/home/binary/binaryworld/infra/docker-compose.yml`)는 수정 가능
 - 클라우드플레어 뒤라 Caddy `trusted_proxies` 필수(없으면 모든 IP 가 HK). 앱은 X-Forwarded-For 첫 값 사용
 - 글 언어 = 쓴 사람의 화면 언어(`app/api/stories/route.ts`). 글자 추정 `detectLangByScript` 는 번역 켤 때 힌트용으로만 남음

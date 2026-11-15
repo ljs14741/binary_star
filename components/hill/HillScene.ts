@@ -41,6 +41,7 @@ const IDLE_BEFORE_AUTO = 20; // 마지막 조작 뒤 이만큼 지나야 다음 
 const WAVE_SEC = 2.2;
 const MOON_AZ = -15, MOON_ELEV = 33; // 달 방위·고도(도). 바다 달빛 길(scenery)도 같은 방위
 const PORTRAIT_CAM_FWD = 3.2; // 세로 화면에서 카메라가 섬 쪽으로 다가가는 거리
+const ORBIT_R = SKY_ORIGIN.z - FIRE_POS.z; // 카메라가 모닥불 둘레를 도는 반지름 (정면일 때 SKY_ORIGIN 자리)
 const DEG = Math.PI / 180;
 const CAM_Y = SKY_ORIGIN.y;
 
@@ -140,6 +141,8 @@ export class HillScene {
     private ground: THREE.Mesh;
     private scenery: Scenery;
     private people = new Map<number, Person>();
+    // 하늘(돔·별·별자리·달·오로라·유성)은 아주 멀리 있는 것처럼 카메라를 따라다님. 땅·사람·모닥불은 제자리
+    private sky = new THREE.Group();
     private pendingNames = new Map<number, string | null>(); // 사람이 화면에 생기기 전에 온 별명
     private meId: number | null = null;
     private texCache = new Map<string, Record<CreatureKind, THREE.Texture>>();
@@ -198,27 +201,29 @@ export class HillScene {
         this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 400);
 
         const dome = new THREE.Mesh(new THREE.SphereGeometry(DOME_R * 1.35, 24, 16), new THREE.ShaderMaterial({ vertexShader: DOME_VERT, fragmentShader: DOME_FRAG, side: THREE.BackSide, depthWrite: false }));
-        this.scene.add(dome);
+        this.scene.add(this.sky);
+        this.sky.add(dome);
         this.ground = this.makeGround();
         this.scene.add(this.ground);
         this.scene.add(this.makeFarHills());
         this.scenery = new Scenery({ reduceMotion: opts.reduceMotion, isMobile }, FIRE_POS.x, FIRE_POS.z, hillHeight(FIRE_POS.x, FIRE_POS.z));
         this.scene.add(this.scenery.group);
+        this.sky.add(this.scenery.sky);
 
         // 달: 정면 왼쪽 별자리 칸 사이(az -15), 별자리 띠 높이(고도 33). 작게 해서 이름표·문장 카드·칸과 안 겹치고, 폰 왼쪽 가장자리 안에 들어옴
         const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,236,196"), transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending }));
         const moonAt = fromAngles(MOON_AZ, MOON_ELEV, DOME_R * 1.1);
         moonGlow.position.set(moonAt.x, moonAt.y, moonAt.z);
         moonGlow.scale.set(11, 11, 1);
-        this.scene.add(moonGlow);
+        this.sky.add(moonGlow);
         const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,244,214"), transparent: true, opacity: 1, depthWrite: false }));
         moon.position.copy(moonGlow.position);
         moon.scale.set(4.2, 4.2, 1);
-        this.scene.add(moon);
+        this.sky.add(moon);
 
         const bg = this.makeBackgroundStars(isMobile ? 600 : 900);
         this.bgMat = bg.material as THREE.ShaderMaterial;
-        this.scene.add(bg);
+        this.sky.add(bg);
 
         this.starGeo = new THREE.BufferGeometry();
         this.starGeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(MAX_STARS * 3), 3));
@@ -235,7 +240,7 @@ export class HillScene {
         });
         this.stars = new THREE.Points(this.starGeo, this.starMat);
         this.stars.frustumCulled = false;
-        this.scene.add(this.stars);
+        this.sky.add(this.stars);
 
         this.glowMe = glowTexture("255,216,107");
         this.glowOther = glowTexture("170,180,255");
@@ -359,11 +364,11 @@ export class HillScene {
     // ---------- 하늘(별자리) ----------
     private clearSky() {
         for (const c of this.constellations) {
-            this.scene.remove(c.lines);
+            this.sky.remove(c.lines);
             c.lines.geometry.dispose();
             (c.lines.material as THREE.Material).dispose();
             for (const s of [c.label, c.sub]) {
-                this.scene.remove(s);
+                this.sky.remove(s);
                 (s.material as THREE.SpriteMaterial).map?.dispose();
                 s.material.dispose();
             }
@@ -420,14 +425,14 @@ export class HillScene {
             const lgeo = new THREE.BufferGeometry();
             lgeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(linePairs.length * 6), 3));
             const lines = new THREE.LineSegments(lgeo, new THREE.LineBasicMaterial({ color: 0xc9d4ff, transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending }));
-            this.scene.add(lines);
+            this.sky.add(lines);
             // 이름표: 주제 방 이름이 주(없으면 안내), 그 아래 별자리 이름은 작고 흐리게
             const labelText = room ? wrapTitle(room.title, this.isMobile ? 9 : 12) : this.opts.emptyLabel;
             const zl = textTexture(labelText, { size: 44, color: "#ffffff", font: room ? "600" : "400", pad: 24 });
             const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: zl.tex, transparent: true, depthWrite: false, opacity: 0.6 }));
             const sl = textTexture(`${shape.symbol} ${shape.names[this.opts.lang]}`, { size: 30, color: "#ffffff", font: "400", pad: 20 });
             const sub = new THREE.Sprite(new THREE.SpriteMaterial({ map: sl.tex, transparent: true, depthWrite: false, opacity: 0.3 }));
-            this.scene.add(label, sub);
+            this.sky.add(label, sub);
             const sc = prevScale.get(zi) ?? (zi === this.index ? this.selScale : 1);
             this.constellations.push({ index: zi, shape, slug: room?.slug ?? null, title: room?.title ?? null, cell, starIds: ids, lines, linePairs, label, labelAspect: zl.aspect, labelLines: labelText.split("\n").length, sub, subAspect: sl.aspect, scale: sc, scaleTarget: sc });
         });
@@ -676,8 +681,8 @@ export class HillScene {
         this.writeStar(i, (this.starGeo.attributes.aBorn as THREE.BufferAttribute).getX(i), now);
         if (e.kind === "glow") {
             (this.starGeo.attributes.aBorn as THREE.BufferAttribute).setX(i, now - 0.9);
-            const start = from ? from.group.position.clone().add(new THREE.Vector3(0, 1.0, 0)) : this.horizonPoint();
-            this.addBeam(start, st.pos, st.mine ? 0xff9bb3 : 0xffd86b);
+            const start = from ? from.group.position.clone().add(new THREE.Vector3(0, 1.0, 0)) : this.horizonPoint().add(this.sky.position);
+            this.addBeam(start, st.pos.clone().add(this.sky.position), st.mine ? 0xff9bb3 : 0xffd86b);
             if (from) this.hearts(from.id);
         }
         this.flagStarAttrs();
@@ -714,12 +719,12 @@ export class HillScene {
         const geo = new THREE.BufferGeometry().setFromPoints([start, start.clone().sub(vel.clone().multiplyScalar(len * 0.1))]);
         const mat = new THREE.LineBasicMaterial({ color: big ? 0xfff4d6 : 0xfff0c8, transparent: true, opacity: big ? 1 : 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
         const line = new THREE.Line(geo, mat);
-        this.scene.add(line);
+        this.sky.add(line);
         if (big) {
             const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glowMe, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending }));
             head.scale.set(3.2, 3.2, 1);
             head.position.copy(start);
-            this.scene.add(head);
+            this.sky.add(head);
             line.userData.head = head;
         }
         this.meteors.push({ line, vel, born: this.clock.getElapsedTime(), life: big ? 2.2 : 1.1, big });
@@ -1123,10 +1128,10 @@ export class HillScene {
         const v = new THREE.Vector3();
         for (const c of this.constellations) {
             const center = starPoint(c.cell, 0, 0, c.scale);
-            v.set(center.x, center.y, center.z).project(this.camera);
+            v.set(center.x, center.y, center.z).add(this.sky.position).project(this.camera);
             if (v.z > 1) continue;
             const edge = starPoint(c.cell, 1, 0, c.scale);
-            const ev = new THREE.Vector3(edge.x, edge.y, edge.z).project(this.camera);
+            const ev = new THREE.Vector3(edge.x, edge.y, edge.z).add(this.sky.position).project(this.camera);
             const rx = Math.abs(ev.x - v.x) * 1.25, ry = rx * (w / h) * 1.15 + 0.03;
             if (Math.abs(nx - v.x) < rx && ny < v.y + ry && ny > v.y - ry * 1.9) return c.index;
         }
@@ -1158,7 +1163,7 @@ export class HillScene {
         const v = new THREE.Vector3();
         const out: { id: number; x: number; y: number; ghost: boolean; room: number }[] = [];
         for (const s of this.starList) {
-            v.copy(s.pos).project(this.camera);
+            v.copy(s.pos).add(this.sky.position).project(this.camera);
             if (v.z > 1 || Math.abs(v.x) > 1 || Math.abs(v.y) > 1) continue;
             out.push({ id: s.id, x: rect.left + ((v.x + 1) / 2) * rect.width, y: rect.top + ((1 - v.y) / 2) * rect.height, ghost: s.ghost, room: s.room });
         }
@@ -1175,7 +1180,7 @@ export class HillScene {
         let best: number | null = null, bestD = (px * 2) / Math.min(w, h);
         for (let i = 0; i < this.starList.length; i++) {
             const s = this.starList[i];
-            v.copy(s.pos).project(this.camera);
+            v.copy(s.pos).add(this.sky.position).project(this.camera);
             if (v.z > 1) continue;
             const d = Math.hypot((v.x - nx) * (w / Math.min(w, h)), (v.y - ny) * (h / Math.min(w, h)));
             if (d < bestD) {
@@ -1200,7 +1205,8 @@ export class HillScene {
 
     // 수평선(바다 끝, 높이 0)의 화면 세로 위치를 %로 .hill-wrap 의 --hill-horizon 에 씀. 카드·안내는 그 위에 붙어 어떤 화면 크기에서도 섬을 안 가림
     private exportHorizon() {
-        const v = new THREE.Vector3(SKY_ORIGIN.x + Math.sin(this.view) * 300, 0, SKY_ORIGIN.z - Math.cos(this.view) * 300).project(this.camera);
+        const c = this.camera.position;
+        const v = new THREE.Vector3(c.x + Math.sin(this.view) * 300, 0, c.z - Math.cos(this.view) * 300).project(this.camera);
         const pct = Math.round(((1 - v.y) / 2) * 1000) / 10;
         if (!Number.isFinite(pct) || Math.abs(pct - this.horizonPct) < 0.3) return;
         this.horizonPct = pct;
@@ -1242,9 +1248,13 @@ export class HillScene {
             if (near !== this.index) this.select(near);
         }
         this.pitch += (this.pitchTarget - this.pitch) * Math.min(1, dt * 6);
-        // 세로(폰)에선 카메라를 섬 쪽으로 당겨 요정이 크게 보임. 하늘은 멀어서 거의 그대로
+        // 카메라: 모닥불 둘레를 돌며 불 건너편 하늘을 봄 → 어느 쪽을 봐도 모닥불과 그쪽 사람들이 앞에 보임
+        // 정면(view 0)일 때 자리는 예전과 같음(SKY_ORIGIN). 하늘은 카메라 자리를 따라옴
+        const bx = FIRE_POS.x - Math.sin(this.view) * ORBIT_R, bz = FIRE_POS.z + Math.cos(this.view) * ORBIT_R;
+        this.sky.position.set(bx - SKY_ORIGIN.x, 0, bz - SKY_ORIGIN.z);
+        // 세로(폰)에선 카메라를 불 쪽으로 당겨 요정이 크게 보임
         const fwd = this.portrait ? PORTRAIT_CAM_FWD : 0;
-        const cx = SKY_ORIGIN.x + Math.sin(this.view) * fwd, cz = SKY_ORIGIN.z - Math.cos(this.view) * fwd;
+        const cx = bx + Math.sin(this.view) * fwd, cz = bz - Math.cos(this.view) * fwd;
         this.camera.position.set(cx, CAM_Y + this.pitch * 2, cz);
         const lookY = CAM_Y + 20 * Math.tan(SKY_V_CENTER * DEG) + this.pitch * 14;
         this.camera.lookAt(cx + Math.sin(this.view) * 20, lookY, cz - Math.cos(this.view) * 20);
@@ -1368,11 +1378,11 @@ export class HillScene {
             const t = (now - m.born) / m.life;
             const hs = m.line.userData.head as THREE.Sprite | undefined;
             if (t >= 1) {
-                this.scene.remove(m.line);
+                this.sky.remove(m.line);
                 m.line.geometry.dispose();
                 (m.line.material as THREE.Material).dispose();
                 if (hs) {
-                    this.scene.remove(hs);
+                    this.sky.remove(hs);
                     hs.material.dispose();
                 }
                 if (m.big && this.dailyResolve) {
