@@ -5,6 +5,7 @@ import { t } from "@/lib/i18n";
 import { siteName } from "@/lib/site";
 import { loadOgFonts } from "@/lib/og-fonts";
 import { countryName, formatNumber } from "@/lib/format";
+import { placeName } from "@/lib/place";
 
 export const runtime = "nodejs";
 export const size = { width: 1200, height: 630 };
@@ -23,7 +24,7 @@ export default async function Image({ params }: { params: Promise<{ lang: string
     const text = body.length > 120 ? body.slice(0, 118) + "…" : body;
     const fontSize = text.length > 80 ? 40 : text.length > 40 ? 48 : 58;
     const meta = story ? `${t(lang, "og_empathy", { n: formatNumber(story.empathyCount, lang) })}   ·   ${t(lang, "og_countries", { n: story.countryCount }).replace("🌏 ", "")}` : "";
-    const where = story?.country ? `${countryName(story.country, lang)}${story.city ? ` · ${story.city}` : ""}` : "";
+    const where = story?.country ? `${countryName(story.country, lang)}${story.city ? ` · ${placeName(story.city, story.country, lang)}` : ""}` : "";
 
     return new ImageResponse(
         (

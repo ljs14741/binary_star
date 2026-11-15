@@ -1,4 +1,5 @@
 // IP → 나라·도시. DB-IP Lite(mmdb) 파일을 읽고, 없거나 실패하면 Accept-Language 로 나라만 추정
+import { pickPlace } from "./place";
 import fs from "fs";
 import path from "path";
 import type { CityResponse, Reader } from "maxmind";
@@ -79,7 +80,8 @@ export async function lookupGeo(ip: string, acceptLanguage: string | null, devOv
                 const res = r.get(ip);
                 if (res) {
                     const country = res.country?.iso_code || null;
-                    const city = res.city?.names?.en || null;
+                    // 한국·일본은 시도 단위, 그 외는 도시. 괄호 안 상세는 버림
+                    const city = pickPlace(country, res.city?.names?.en || null, res.subdivisions?.[0]?.names?.en || null);
                     const lat = res.location?.latitude;
                     const lng = res.location?.longitude;
                     if (country) {

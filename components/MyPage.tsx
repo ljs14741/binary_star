@@ -13,6 +13,7 @@ import { api, getLastTotal, getOwnerToken, langPath, setLastTotal, setOwnerToken
 import StoryCard from "./StoryCard";
 import CrisisNotice from "./CrisisNotice";
 import { countryName, flagEmoji, formatNumber } from "@/lib/format";
+import { placeName } from "@/lib/place";
 
 const Globe = dynamic(() => import("./Globe"), { ssr: false, loading: () => <div className="mx-auto aspect-square w-full max-w-[360px] animate-pulse rounded-full bg-card" /> });
 
@@ -44,7 +45,7 @@ export default function MyPage({ token }: { token: string }) {
     const meUrl = `${siteOrigin()}${langPath(lang, `/me/${token}`)}`;
     const hasCrisis = data.stories.some((s) => s.moderationNote === "crisis");
     // 공감이 온 곳 한 줄 ("서울 3 · 부산 1 · Tokyo 1")
-    const placeList = data.lights.slice(0, 5).map((l) => `${l.city || (l.country ? countryName(l.country, lang) : t("country_unknown"))} ${formatNumber(l.count, lang)}`).join(" · ");
+    const placeList = data.lights.slice(0, 5).map((l) => `${placeName(l.city, l.country, lang) || (l.country ? countryName(l.country, lang) : t("country_unknown"))} ${formatNumber(l.count, lang)}`).join(" · ");
     const onlyCountry = data.countryCount === 1 ? data.lights.find((l) => l.country)?.country ?? null : null;
 
     return (
