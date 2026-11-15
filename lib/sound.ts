@@ -2,7 +2,7 @@
 // 언덕 소리: 파일 없이 WebAudio 로 합성. 효과음만(공감·새 별·별똥별·의식·반짝임). 배경음은 폰 스피커에서 이상하게 들려 뺌
 // 브라우저 자동재생 제한 때문에 start() 는 반드시 사용자 입력(터치·클릭·키) 안에서 불러야 함
 
-export type Sfx = "empathy" | "empathyFar" | "born" | "meteor" | "daily" | "twinkle" | "lighthouse";
+export type Sfx = "empathy" | "empathyFar" | "born" | "meteor" | "daily" | "twinkle" | "lighthouse" | "lantern" | "lanternFar";
 
 const PREF_KEY = "star_sound";
 
@@ -134,7 +134,8 @@ export class Sound {
     }
 
     private whoosh(at: number, vol: number, from: number, to: number, dur: number) {
-        const ctx = this.ctx!, out = this.master!;
+        const ctx = this.ctx!,
+            out = this.master!;
         const src = ctx.createBufferSource();
         src.buffer = this.noise;
         src.playbackRate.value = 3;
@@ -154,7 +155,8 @@ export class Sound {
 
     sfx(name: Sfx) {
         if (!this.running || !this.ctx || !this.master) return;
-        const ctx = this.ctx, now = ctx.currentTime;
+        const ctx = this.ctx,
+            now = ctx.currentTime;
         // 같은 소리 너무 잦으면 건너뜀
         const minGap = name === "twinkle" ? 1.5 : name === "meteor" ? 1 : 0.12;
         if (now - (this.lastSfx.get(name) ?? -10) < minGap) return;
@@ -186,6 +188,15 @@ export class Sound {
                 break;
             case "lighthouse":
                 this.bell(174.61, now, 0.03, 0.5, 2.5, out);
+                break;
+            case "lantern": // 풍등 띄우기: 낮은 바람 + 두 음
+                this.whoosh(now, 0.05, 300, 1800, 1.4);
+                this.bell(523.25, now + 0.3, 0.1, -0.1, 2.2, out);
+                this.bell(783.99, now + 0.55, 0.08, 0.1, 2.6, out);
+                break;
+            case "lanternFar": // 남의 풍등: 멀리서 작게
+                this.bell(523.25, now, 0.035, (Math.random() - 0.5) * 1.2, 2.0, out);
+                this.bell(783.99, now + 0.25, 0.03, (Math.random() - 0.5) * 1.2, 2.4, out);
                 break;
         }
     }

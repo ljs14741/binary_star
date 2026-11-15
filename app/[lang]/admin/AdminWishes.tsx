@@ -1,5 +1,5 @@
 "use client";
-// 관리자: 최근 소원 (숨김·공개·지우기). 위기 낱말(private)·신고된 것도 보임
+// 관리자: 최근 소원 (숨김·공개·고정·지우기). 위기 낱말(private)·신고된 것도 보임. 고정한 소원은 하루가 지나도 하늘에 남음
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/lib/client";
 import type { AdminWish } from "@/lib/wishes";
@@ -11,7 +11,7 @@ export default function AdminWishes({ adminKey }: { adminKey: string }) {
             const r = await api<{ items: AdminWish[] }>("/api/admin/wish", { method: "POST", json: { key: adminKey, ...body } });
             if (r.ok) setItems(r.items);
         },
-        [adminKey]
+        [adminKey],
     );
     useEffect(() => {
         let alive = true;
@@ -30,12 +30,31 @@ export default function AdminWishes({ adminKey }: { adminKey: string }) {
             {items.map((w) => (
                 <li key={w.id} className="rounded-xl bg-card px-3 py-2">
                     <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-dim">
-                        #{w.id} · {w.day} · <span className={w.status === "public" ? "text-star-soft" : "text-rose"}>{w.status === "private" ? "위기 낱말(본인만)" : w.status === "hidden" ? "숨김" : "공개"}</span> · 빌어 줄게 {w.cheers}
+                        #{w.id} · {w.day} · <span className={w.status === "public" ? "text-star-soft" : "text-rose"}>{w.status === "private" ? "위기 낱말(본인만)" : w.status === "hidden" ? "숨김" : "공개"}</span> ·
+                        이루어지길 {w.cheers}
+                        {w.pinned && <span className="text-star">📌 고정</span>}
                         {w.reports > 0 && <span className="text-rose">신고 {w.reports}</span>}
                     </div>
                     <p className="mt-0.5 break-words text-[13px] text-ink">{w.body}</p>
                     <div className="mt-1.5 flex gap-1.5">
-                        {w.status === "public" ? <button onClick={() => call({ action: "hide", id: w.id })} className={btn}>숨기기</button> : <button onClick={() => call({ action: "unhide", id: w.id })} className={btn}>공개</button>}
+                        {w.status === "public" ? (
+                            <button onClick={() => call({ action: "hide", id: w.id })} className={btn}>
+                                숨기기
+                            </button>
+                        ) : (
+                            <button onClick={() => call({ action: "unhide", id: w.id })} className={btn}>
+                                공개
+                            </button>
+                        )}
+                        {w.pinned ? (
+                            <button onClick={() => call({ action: "unpin", id: w.id })} className={btn}>
+                                고정 풀기
+                            </button>
+                        ) : (
+                            <button onClick={() => call({ action: "pin", id: w.id })} className={btn}>
+                                고정
+                            </button>
+                        )}
                         <button onClick={() => confirm(`#${w.id} 소원을 지울까요?`) && call({ action: "remove", id: w.id })} className={`${btn} text-rose`}>
                             지우기
                         </button>

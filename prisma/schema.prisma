@@ -170,11 +170,13 @@ model wish {
   status       String       @default("public") @db.VarChar(16) // public | private(위기 낱말) | hidden(신고·관리자)
   cheer_count  Int          @default(0)
   report_count Int          @default(0)
+  pinned       Boolean      @default(false) // 관리자 고정: 하루가 지나도 하늘에 남음
   created_at   DateTime     @default(now()) @db.Timestamp(0)
   cheers       wish_cheer[]
   reports      wish_report[]
 
   @@index([kst_day, status])
+  @@index([created_at, status])
   @@index([voter_key, kst_day])
 }
 

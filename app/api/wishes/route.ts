@@ -1,12 +1,12 @@
 import { err, getCtx, json, readJson, sameOrigin } from "@/lib/api";
-import { createWish, listTonight } from "@/lib/wishes";
+import { createWish, listSky } from "@/lib/wishes";
 import { isLang } from "@/lib/i18n/config";
 import { rateLimit } from "@/lib/ratelimit";
 
-// GET /api/wishes → 오늘 밤 소원 (하늘에 뜨는 풍등)
+// GET /api/wishes → 지금 하늘의 소원 (최근 하루 + 고정)
 export async function GET() {
     const ctx = await getCtx();
-    return json({ ok: true, ...(await listTonight(ctx.voterKey)) });
+    return json({ ok: true, ...(await listSky(ctx.voterKey)) });
 }
 
 // POST /api/wishes {body, lang} → 소원 빌기

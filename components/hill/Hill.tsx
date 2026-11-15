@@ -27,7 +27,8 @@ import { SISTER_SITES, siteName, sisterUrl } from "@/lib/site";
 type Props = { initialTotal: number };
 
 const INTRO_KEY = "star_intro_seen";
-const INTRO_N = 4; // 처음 안내 장 수 (messages 의 intro_1~4)
+const INTRO_N = 5; // 처음 안내 장 수 (messages 의 intro_1~5)
+const DRAG_KEY = "star_drag_seen"; // 하늘 돌리기 힌트를 봤는지
 const EMOTE_LABEL: Partial<Record<Gesture, string>> = { wave: "👋", heart: "💛", pat: "🤗", tear: "🥲", joy: "😊", lookup: "✨" };
 const DONATE_URL = "https://qr.kakaopay.com/Ej9JnRsvn"; // game 과 같은 카카오페이 송금 링크
 
@@ -143,6 +144,25 @@ function Hill3D({ initialTotal }: Props) {
         },
         () => false,
     );
+    // 처음엔 하늘을 돌릴 수 있는지 모르니 안내 뒤 "끌어서 돌려 보세요" 힌트 (한 번 끌거나 14초 지나면 끝)
+    const needsDragHint = useSyncExternalStore(
+        () => () => {},
+        () => {
+            try {
+                return !localStorage.getItem(DRAG_KEY);
+            } catch {
+                return false;
+            }
+        },
+        () => false,
+    );
+    const [dragDone, setDragDone] = useState(false);
+    const markDrag = useCallback(() => {
+        setDragDone(true);
+        try {
+            localStorage.setItem(DRAG_KEY, "1");
+        } catch {}
+    }, []);
     const [introStep, setIntroStep] = useState(0);
     const [introDone, setIntroDoneRaw] = useState(false);
     const setIntroDone = (v: boolean) => {
@@ -150,6 +170,13 @@ function Hill3D({ initialTotal }: Props) {
         if (v) setTimeout(() => setIntroDoneRaw(false), 6000);
     };
     const intro: number | null = needsIntro && !introDone ? introStep : null;
+    const dragHint = needsDragHint && !dragDone && intro === null;
+    useEffect(() => {
+        if (!dragHint) return;
+        const tm = setTimeout(markDrag, 14000);
+        return () => clearTimeout(tm);
+    }, [dragHint, markDrag]);
+    const cardRef = useRef<HTMLButtonElement | null>(null); // 가운데 이야기 카드 (부두 이름표가 겹치면 숨기려고)
     const [toastLine, setToastLine] = useState<string | null>(null);
     const seenDaily = useRef<number>(0);
     const flashTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -233,6 +260,8 @@ function Hill3D({ initialTotal }: Props) {
                 onGift: (to) => bridge.send({ t: "gift", to }),
                 wishLabel: t("wish_label"),
                 onWishGo: () => flash(t("wish_going")),
+                onLookDrag: markDrag,
+                getCardRect: () => cardRef.current?.getBoundingClientRect() ?? null,
                 onWishArrive: () => setWishOpen(true),
                 onWishTap: (id) => setWishTapped(id),
             });
@@ -258,7 +287,10 @@ function Hill3D({ initialTotal }: Props) {
                 if (from !== bridge.meId) scene.gift(from, to);
             },
             onLantern: (id) => {
-                if (id !== bridge.meId) scene.launchLantern(id);
+                if (id !== bridge.meId) {
+                    scene.launchLantern(id);
+                    sound.sfx("lanternFar");
+                }
             },
             onName: (id, n) => scene.setName(id, n),
             onStar: (e: StarEvent) => {
@@ -286,7 +318,7 @@ function Hill3D({ initialTotal }: Props) {
             sceneRef.current = null;
             if (sitTimer.current) clearTimeout(sitTimer.current);
         };
-    }, [bridge, openStory, flash, t, sound, lang]);
+    }, [bridge, openStory, flash, t, sound, lang, markDrag]);
 
     // 하늘(별자리) 불러오기
     useEffect(() => {
@@ -493,6 +525,7 @@ function Hill3D({ initialTotal }: Props) {
                 onSent={(crisis) => {
                     setWishOpen(false);
                     if (bridge.meId != null) sceneRef.current?.launchLantern(bridge.meId);
+                    sound.sfx("lantern");
                     bridge.send({ t: "lantern" });
                     flash(t("wish_sent"));
                     if (crisis) setWishCrisis(true);
@@ -572,6 +605,7 @@ function Hill3D({ initialTotal }: Props) {
                     )}
                     {highlight && highlight.roomIndex === index && highlight.star.line && (
                         <motion.button
+                            ref={cardRef}
                             key={highlight.star.id}
                             initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -603,6 +637,17 @@ function Hill3D({ initialTotal }: Props) {
                     {t("hill_scroll")} <ChevronDown size={14} className="animate-bounce" />
                 </a>
             </div>
+
+            {/* 하늘 돌리기 힌트 (처음 한 번) */}
+            <AnimatePresence>
+                {dragHint && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="pointer-events-none absolute inset-x-0 top-[42%] z-20 flex justify-center">
+                        <motion.span animate={{ x: [-8, 8, -8] }} transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }} className="glass rounded-full px-4 py-2 text-[13px] text-ink/90">
+                            {t("hint_drag")}
+                        </motion.span>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* 처음 온 사람 안내 */}
             <AnimatePresence>

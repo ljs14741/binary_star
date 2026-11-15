@@ -35,6 +35,8 @@ export type SceneOpts = {
     onWishGo: () => void; // 부두로 걸어가기 시작 (안내 한 줄)
     onWishArrive: () => void; // 내 요정이 부두 끝에 도착 (소원 창 열기)
     onWishTap: (id: number) => void; // 하늘에 뜬 남의 풍등을 누름
+    onLookDrag: () => void; // 하늘을 끌어 돌리기 시작 (처음 힌트 끄기)
+    getCardRect: () => DOMRect | null; // 가운데 이야기 카드 자리 (부두 이름표가 겹치면 흐리게)
     reduceMotion: boolean;
 };
 
@@ -56,6 +58,7 @@ const WISH_SPOT = { x: WISH_DOCK.x, z: WISH_DOCK.z };
 const MOON_DIR = { x: Math.sin(MOON_AZ * (Math.PI / 180)), z: -Math.cos(MOON_AZ * (Math.PI / 180)) };
 const DOCK_LEN = WISH_DOCK.len;
 const WISH_RUN = 1.45; // 부두로 갈 때는 총총 빠르게
+const DOCK_CAM_FWD = 4; // 부두 위에 서면 카메라가 이만큼 다가감 (내가 거기 서 있는 느낌)
 const TAG_H = 0.28,
     TAG_Y = 1.0; // 별명표 높이·자리(요정 머리 위)
 const ORBIT_R = SKY_ORIGIN.z - FIRE_POS.z; // 카메라가 모닥불 둘레를 도는 반지름 (정면일 때 SKY_ORIGIN 자리)
@@ -179,6 +182,9 @@ export class HillScene {
     private wishPending: 0 | 1 | 2 = 0; // 부두로 걸어가는 중 (1: 부두 입구까지, 2: 부두 끝까지)
     private dockLabel: THREE.Sprite | null = null; // 부두 이름표 (살짝 숨 쉬듯)
     private dockGlow: THREE.Sprite | null = null;
+    private dockLabelFade = 1; // 이야기 카드에 가리면 0 으로
+    private cardCheckAt = 0;
+    private dockNear = 0; // 0~1, 내 요정이 부두 위에 있으면 1 로
     private lanternTex = lanternTexture();
     private lanterns: { s: THREE.Sprite; start: THREE.Vector3; born: number; sway: number }[] = []; // 막 띄운 풍등 (땅 좌표)
     private skyWishes: { id: number; s: THREE.Sprite; g: THREE.Sprite; phase: number; flare: number }[] = []; // 오늘 밤 소원 풍등 (하늘 좌표)
@@ -1359,6 +1365,7 @@ export class HillScene {
         const dx = e.clientX - this.pointer.x,
             dy = e.clientY - this.pointer.y;
         if (!this.pointer.moved && Math.hypot(dx, dy) < 8) return;
+        if (!this.pointer.moved && this.pointer.mode === "look") this.opts.onLookDrag();
         this.pointer.moved = true;
         if (this.pointer.mode === "walk") {
             // 잡은 지점에서 손가락이 움직인 만큼 요정이 따라감 (요정을 잡고 끄는 느낌). 섬 밖이면 마지막 자리 유지
@@ -1721,12 +1728,15 @@ export class HillScene {
         const bx = FIRE_POS.x - Math.sin(this.view) * ORBIT_R,
             bz = FIRE_POS.z + Math.cos(this.view) * ORBIT_R;
         this.sky.position.set(bx - SKY_ORIGIN.x, 0, bz - SKY_ORIGIN.z);
-        // 세로(폰)에선 카메라를 불 쪽으로 당겨 요정이 크게 보임
-        const fwd = this.portrait ? PORTRAIT_CAM_FWD : 0;
+        // 세로(폰)에선 카메라를 불 쪽으로 당겨 요정이 크게 보임. 내 요정이 부두 위에 서면 더 다가감
+        const meP = this.meId != null ? this.people.get(this.meId) : null;
+        const wantNear = meP && onDock(meP.pos.x, meP.pos.y) ? 1 : 0;
+        this.dockNear += (wantNear - this.dockNear) * Math.min(1, dt * 1.6);
+        const fwd = (this.portrait ? PORTRAIT_CAM_FWD : 0) + this.dockNear * DOCK_CAM_FWD;
         const cx = bx + Math.sin(this.view) * fwd,
             cz = bz - Math.cos(this.view) * fwd;
         this.camera.position.set(cx, CAM_Y + this.pitch * 2, cz);
-        const lookY = CAM_Y + 20 * Math.tan(SKY_V_CENTER * DEG) + this.pitch * 14;
+        const lookY = CAM_Y + 20 * Math.tan(SKY_V_CENTER * DEG) + this.pitch * 14 - this.dockNear * 1.2;
         this.camera.lookAt(cx + Math.sin(this.view) * 20, lookY, cz - Math.cos(this.view) * 20);
 
         this.scenery.update(now, dt, this.view);
@@ -1830,10 +1840,30 @@ export class HillScene {
                 else this.arriveWish(now);
             }
         }
-        // 부두 이름표·등불 숨 쉬듯
-        if (this.dockLabel && !this.opts.reduceMotion) {
-            this.dockLabel.material.opacity = 0.75 + 0.25 * Math.sin(now * 2.2);
-            if (this.dockGlow) this.dockGlow.material.opacity = 0.5 + 0.15 * Math.sin(now * 2.2);
+        // 부두 이름표·등불 숨 쉬듯. 가운데 이야기 카드와 겹치면 이름표를 숨김
+        if (this.dockLabel) {
+            if (now > this.cardCheckAt) {
+                this.cardCheckAt = now + 0.25;
+                const rect = this.opts.getCardRect();
+                let covered = false;
+                if (rect) {
+                    const c = this.canvas.getBoundingClientRect();
+                    const v = new THREE.Vector3();
+                    for (const dy of [0, 0.35, 0.7]) {
+                        v.copy(this.dockLabel.position)
+                            .setY(this.dockLabel.position.y + dy)
+                            .project(this.camera);
+                        const sx = c.left + ((v.x + 1) / 2) * c.width,
+                            sy = c.top + ((1 - v.y) / 2) * c.height;
+                        if (v.z < 1 && sx > rect.left - 12 && sx < rect.right + 12 && sy > rect.top - 12 && sy < rect.bottom + 12) covered = true;
+                    }
+                }
+                this.dockLabelFade = covered ? 0 : 1;
+            }
+            const breathe = this.opts.reduceMotion ? 0.9 : 0.75 + 0.25 * Math.sin(now * 2.2);
+            const cur = this.dockLabel.material.opacity;
+            this.dockLabel.material.opacity = cur + (breathe * this.dockLabelFade - cur) * Math.min(1, dt * 6);
+            if (this.dockGlow && !this.opts.reduceMotion) this.dockGlow.material.opacity = 0.5 + 0.15 * Math.sin(now * 2.2);
         }
         // 막 띄운 풍등: 7초 동안 달 쪽 하늘로
         this.lanterns = this.lanterns.filter((l) => {

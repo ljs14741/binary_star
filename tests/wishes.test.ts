@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { cheerWish, createWish, listTonight, reportWish, WISH_PER_DAY } from "@/lib/wishes";
+import { adminWishAction, cheerWish, createWish, listSky, reportWish, WISH_PER_DAY } from "@/lib/wishes";
 
 const vk = (n: string) => `test-wish-${n}-`.padEnd(64, "x");
 const ip = (n: string) => `test-wish-ip-${n}`;
@@ -11,12 +11,12 @@ afterAll(async () => {
 });
 
 describe("소원 부두", () => {
-    it("빌면 오늘 밤 하늘에 뜨고, 금칙어·링크는 막힘, 하루 3번까지", async () => {
+    it("빌면 하늘에 뜨고, 금칙어·링크는 막힘, 하루 3번까지", async () => {
         const r = await createWish({ body: "  올해는 꼭 건강하게  ", lang: "ko", voterKey: vk("a"), ipHash: ip("a") });
         expect(r.ok).toBe(true);
         if (!r.ok) return;
         expect(r.wish.body).toBe("올해는 꼭 건강하게");
-        const list = await listTonight(vk("a"));
+        const list = await listSky(vk("a"));
         expect(list.items.find((w) => w.id === r.wish.id)).toMatchObject({ mine: true, cheers: 0 });
         expect(await createWish({ body: "시발 소원", lang: "ko", voterKey: vk("b"), ipHash: ip("b") })).toMatchObject({ ok: false, error: "banned" });
         expect(await createWish({ body: "https://spam.com 와서 봐", lang: "ko", voterKey: vk("b"), ipHash: ip("b") })).toMatchObject({ ok: false, error: "url" });
@@ -29,7 +29,7 @@ describe("소원 부두", () => {
         const r = await createWish({ body: "죽고 싶다", lang: "ko", voterKey: vk("c"), ipHash: ip("c") });
         expect(r).toMatchObject({ ok: true, crisis: true });
         if (!r.ok) return;
-        expect((await listTonight()).items.some((w) => w.id === r.wish.id)).toBe(false);
+        expect((await listSky()).items.some((w) => w.id === r.wish.id)).toBe(false);
     });
 
     it("빌어 줄게는 한 사람 한 번, 자기 소원엔 못 함. 신고 3곳이면 내려감", async () => {
@@ -42,6 +42,20 @@ describe("소원 부두", () => {
         expect(await reportWish(r.wish.id, ip("r1"))).toMatchObject({ ok: false, error: "dup" });
         await reportWish(r.wish.id, ip("r2"));
         expect(await reportWish(r.wish.id, ip("r3"))).toEqual({ ok: true, hidden: true });
-        expect((await listTonight()).items.some((w) => w.id === r.wish.id)).toBe(false);
+        expect((await listSky()).items.some((w) => w.id === r.wish.id)).toBe(false);
+    });
+
+    it("풍등은 하루 지나면 내려가고, 고정한 것은 남음", async () => {
+        const r = await createWish({ body: "오래 남는 소원", lang: "ko", voterKey: vk("f"), ipHash: ip("f") });
+        if (!r.ok) throw new Error("create failed");
+        await prisma.wish.update({ where: { id: r.wish.id }, data: { created_at: new Date(Date.now() - 26 * 3600_000) } });
+        const { memoClear } = await import("@/lib/cache");
+        memoClear("wishes:");
+        expect((await listSky()).items.some((w) => w.id === r.wish.id)).toBe(false);
+        expect(await adminWishAction(r.wish.id, "pin")).toBe(true);
+        const list = await listSky();
+        expect(list.items[0]?.id).toBe(r.wish.id); // 고정은 맨 앞
+        expect(await adminWishAction(r.wish.id, "unpin")).toBe(true);
+        expect((await listSky()).items.some((w) => w.id === r.wish.id)).toBe(false);
     });
 });
