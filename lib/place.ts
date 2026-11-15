@@ -1,6 +1,7 @@
 // 지역 이름 다듬기·번역. DB-IP 무료판은 한국을 동 단위 영문("Yongsan-dong (Hangang-daero)")으로 주고 정확도도 낮아서,
 // 한국·일본은 시도/도도부현 단위로 저장하고, 보여 줄 땐 언어별 이름으로 바꿈. DB 에는 영문 그대로 저장
 import type { Lang } from "./i18n/config";
+import type { Geo } from "./geo";
 
 // DB-IP 결과 → 저장할 지역 이름 하나
 export function pickPlace(country: string | null, city: string | null, subdivision: string | null): string | null {
@@ -49,4 +50,23 @@ export function placeName(city: string | null | undefined, country: string | nul
     if (!table) return city;
     const hit = table[norm(city)];
     return hit ? hit[i] : city;
+}
+
+// 쓰는 사람이 직접 고르는 한국 지역. key 는 DB-IP 영문 표기와 같게 (placeName 으로 번역됨). 좌표는 지구본용 중심
+export const KR_REGIONS: { key: string; lat: number; lng: number }[] = [
+    { key: "Seoul", lat: 37.6, lng: 127.0 }, { key: "Gyeonggi-do", lat: 37.4, lng: 127.5 }, { key: "Incheon", lat: 37.5, lng: 126.7 },
+    { key: "Busan", lat: 35.2, lng: 129.1 }, { key: "Daegu", lat: 35.9, lng: 128.6 }, { key: "Gwangju", lat: 35.2, lng: 126.9 },
+    { key: "Daejeon", lat: 36.4, lng: 127.4 }, { key: "Ulsan", lat: 35.5, lng: 129.3 }, { key: "Sejong", lat: 36.5, lng: 127.3 },
+    { key: "Gangwon-do", lat: 37.8, lng: 128.2 }, { key: "Chungcheongbuk-do", lat: 36.6, lng: 127.5 }, { key: "Chungcheongnam-do", lat: 36.7, lng: 126.7 },
+    { key: "Jeollabuk-do", lat: 35.7, lng: 127.2 }, { key: "Jeollanam-do", lat: 34.9, lng: 127.0 }, { key: "Gyeongsangbuk-do", lat: 36.5, lng: 128.9 },
+    { key: "Gyeongsangnam-do", lat: 35.5, lng: 128.2 }, { key: "Jeju-do", lat: 33.5, lng: 126.5 },
+];
+
+// 추정 지역 → 사람이 고른 지역으로 덮어씀. undefined/모르는 값이면 추정 그대로, "" 이면 지역 숨김(나라만)
+export function applyRegion(geo: Geo, region: string | null | undefined): Geo {
+    if (region == null) return geo;
+    if (region === "") return { ...geo, city: null };
+    const r = KR_REGIONS.find((x) => x.key === region);
+    if (!r) return geo;
+    return { country: "KR", city: r.key, lat: r.lat, lng: r.lng };
 }

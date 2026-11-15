@@ -1,6 +1,7 @@
 import { getCtx, err, json, parseIdList, readJson, sameOrigin } from "@/lib/api";
 import { createStory, getFeed } from "@/lib/stories";
 import { detectLangByScript, isLang } from "@/lib/i18n/config";
+import { applyRegion } from "@/lib/place";
 
 // GET /api/stories?room=slug&lang=ko&first=12&exclude=1,2&seen=3,4&limit=8
 export async function GET(req: Request) {
@@ -20,7 +21,7 @@ export async function GET(req: Request) {
     return json({ ok: true, ...feed });
 }
 
-type Body = { room: string; body: string; nickname?: string | null; ageGroup?: string | null; lang?: string };
+type Body = { room: string; body: string; nickname?: string | null; ageGroup?: string | null; lang?: string; region?: string | null };
 
 // POST /api/stories
 export async function POST(req: Request) {
@@ -38,7 +39,8 @@ export async function POST(req: Request) {
         lang,
         voterKey: ctx.voterKey,
         ownerToken: ctx.ownerToken,
-        geo: ctx.geo,
+        // 한국이면 쓰는 사람이 고른 시도가 IP 추정보다 우선
+        geo: applyRegion(ctx.geo, typeof data.region === "string" ? data.region : undefined),
     });
     if (!r.ok) return err(r.error, r.error === "limit" ? 429 : 400);
     return json({ ok: true, story: r.story, ownerToken: r.ownerToken, masked: r.masked, crisis: r.crisis });

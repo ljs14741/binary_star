@@ -77,6 +77,7 @@ export const ko = {
 
     write_title: "나도 한마디",
     write_placeholder: "한 줄이어도, 아주 긴 글이어도 괜찮아요.",
+    write_region: "지역 (선택 · 추정이 틀리면 바꿔 주세요)",
     write_age: "지금 나이대 (선택)",
     write_count: "{n} / {max}",
     write_submit: "남기기",

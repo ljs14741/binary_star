@@ -78,6 +78,7 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
 
     write_title: "我也說一句",
     write_placeholder: "一句話也好，長長的一封信也好。",
+    write_region: "地區（選填・推測不對請修改）",
     write_age: "現在的年齡層（選填）",
     write_count: "{n} / {max}",
     write_submit: "留下",

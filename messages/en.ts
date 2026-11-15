@@ -78,6 +78,7 @@ export const en: { [K in keyof typeof ko]: string } = {
 
     write_title: "Write yours",
     write_placeholder: "One line or a long letter, both are welcome.",
+    write_region: "Region (optional · fix it if the guess is off)",
     write_age: "Your age now (optional)",
     write_count: "{n} / {max}",
     write_submit: "Post",

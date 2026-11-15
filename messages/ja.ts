@@ -78,6 +78,7 @@ export const ja: { [K in keyof typeof ko]: string } = {
 
     write_title: "わたしも一言",
     write_placeholder: "一行でも、長い手紙でも大丈夫です。",
+    write_region: "地域（任意・推定が違えば直してください）",
     write_age: "今の年代（任意）",
     write_count: "{n} / {max}",
     write_submit: "残す",

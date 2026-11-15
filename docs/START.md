@@ -16,6 +16,7 @@
 
 ## 출시 전 체크리스트 (2026-11-15, 친구 테스트 직전)
 - 결정: **Claude API 키 없이 무료로 간다**(검수는 기본 필터+신고, 번역 없음 → 언어별로 자기 언어 글만 보임). 번역 약속 문구(쓰기 화면·올린 뒤·소개)는 `aiEnabled()` 로 분기해 키 없으면 안 나옴(`*_local` 키)
+- 12차: 쓰기 화면 지역 칩. 서버 추정이 KR 이면 17개 시도 칩(`GET /api/geo` 로 초기값, 추정값 선택됨). 고른 값은 `POST /api/stories` 의 `region` → `applyRegion`(lib/place.ts)이 IP 추정을 덮음. 선택 해제 = 지역 숨김(나라만). 외국은 칩 없음. 이유: KT 등은 IP 가 교환국 기준이라 안양이 용산으로 잡히는 식으로 틀림
 - 11차: 지역 이름. DB-IP 무료판이 한국을 동 단위 영문("Yongsan-dong (Hangang-daero)")으로 줘서, 한국·일본은 시도 단위로 저장(`lib/place.ts` pickPlace, geo.ts 에서 호출)하고 표시 땐 언어별 이름(placeName: 한국 17시도·일본 주요 도도부현·대만 주요 도시, 모르면 영문). 카드·내 이야기·OG 이미지에 적용. 기존 DB 1건은 Seoul 로 고침
 - 10차(2026-11-15 오후): 클라우드플레어 전환 완료(상세 `docs/DEPLOY.md` 클라우드플레어 절). Caddyfile 에 trusted_proxies·www 리다이렉트 넣고 사용자가 reload 함. 클라우드플레어 경유 웹소켓 국가 KR 확인 완료
 - 9차(2026-11-15): 시드 68 + 테스트 글 5 삭제 완료(DB 글 0). **관리자 페이지** `/ko/admin?key=STAR_ADMIN_KEY`(`lib/admin.ts`, `app/[lang]/admin/`, 조치 API `app/api/admin/story`): 지금 접속·오늘/7일/전체 방문자(새 테이블 `visit_day`, `components/VisitBeacon.tsx` 가 세션당 1번 `POST /api/visit`)·글·공감·방별·최근 글 숨기기/공개/내리기·신고·제안. 키는 compose 와 `.env.local`. 카카오 도메인 등록은 사용자가 끝냄
