@@ -19,15 +19,15 @@ export default function LangSwitcher() {
         router.push(parts.join("/") || `/${next}`);
     };
 
+    // 아이콘 하나만 보이고, 그 위에 투명한 select 를 겹쳐서 누르면 기기 기본 언어 목록이 뜸
     return (
-        <label className="relative flex items-center gap-1 rounded-full border border-line bg-card px-2 py-1 text-xs text-muted">
-            <Globe2 size={13} />
-            <span className="text-[11px] text-dim">{t("lang_label")}</span>
+        <label title={t("lang_label")} className="relative flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-line bg-card text-muted hover:text-ink">
+            <Globe2 size={16} />
             <select
                 aria-label={t("lang_label")}
                 value={lang}
                 onChange={(e) => switchTo(e.target.value as Lang)}
-                className="appearance-none bg-transparent pr-1 text-xs text-ink outline-none"
+                className="absolute inset-0 cursor-pointer appearance-none opacity-0"
             >
                 {LANGS.map((l) => (
                     <option key={l} value={l} className="bg-night text-ink">
