@@ -3,10 +3,10 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Coffee, Hand, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Coffee, Smile, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
 import type { SkyData } from "@/lib/hill";
 import type { StoryView } from "@/lib/stories";
-import { HILL_CAP, type StarEvent } from "@/lib/realtime/protocol";
+import { EMOTES, HILL_CAP, type Gesture, type StarEvent } from "@/lib/realtime/protocol";
 import { useLang, useT } from "@/components/I18nProvider";
 import BottomSheet from "@/components/BottomSheet";
 import StoryCard from "@/components/StoryCard";
@@ -24,6 +24,7 @@ import { siteName } from "@/lib/site";
 type Props = { initialTotal: number };
 
 const INTRO_KEY = "star_intro_seen";
+const EMOTE_LABEL: Partial<Record<Gesture, string>> = { wave: "👋", heart: "💛", pat: "🤗", tear: "🥲", joy: "😊", lookup: "✨" };
 const DONATE_URL = "https://qr.kakaopay.com/Ej9JnRsvn"; // game 과 같은 카카오페이 송금 링크
 
 // 소리: 브라우저 자동재생 제한 때문에 첫 터치·클릭·키 입력 뒤에 켬. 끄기 버튼은 브라우저가 기억
@@ -93,6 +94,7 @@ function Hill3D({ initialTotal }: Props) {
     const [shareOpen, setShareOpen] = useState(false);
     const [helpOpen, setHelpOpen] = useState(false);
     const [donateOpen, setDonateOpen] = useState(false);
+    const [emoteOpen, setEmoteOpen] = useState(false);
     // 헤더·글쓰기에서 별명을 바꾸면 언덕 이름표도 바로 바뀜
     useEffect(() => {
         const send = () => bridge.send({ t: "name", n: getNickname() || null });
@@ -178,6 +180,7 @@ function Hill3D({ initialTotal }: Props) {
                 onHighlight: (h) => setHighlight(h),
                 onSfx: (name) => sound.sfx(name),
                 onGesture: (g) => bridge.send({ t: "gesture", g }),
+                onGift: (to) => bridge.send({ t: "gift", to }),
             });
         } catch (e) {
             console.warn("[hill] 3D 실패", e);
@@ -193,7 +196,13 @@ function Hill3D({ initialTotal }: Props) {
                 bridge.send({ t: "name", n: ensureNickname(() => randomNickname(lang)) || null });
             },
             onTick: (m, j, l) => scene.applyTick(m, j, l),
-            onGesture: (id, g) => scene.gesture(id, g),
+            // 내 몸짓·마음은 누를 때 이미 보여 줬으니 서버에서 돌아온 건 건너뜀
+            onGesture: (id, g) => {
+                if (id !== bridge.meId) scene.gesture(id, g);
+            },
+            onGift: (from, to) => {
+                if (from !== bridge.meId) scene.gift(from, to);
+            },
             onName: (id, n) => scene.setName(id, n),
             onStar: (e: StarEvent) => {
                 scene.starEvent(e);
@@ -325,9 +334,32 @@ function Hill3D({ initialTotal }: Props) {
                     {/* 버튼 왼쪽에 띄움: 첫 터치에 사라질 때 아래 버튼들이 밀려 올라가 터치가 빗나가지 않게 */}
                     {soundOn && !soundArmed && intro === null && <p className="absolute right-full top-1/2 mr-1.5 -translate-y-1/2 whitespace-nowrap rounded-full bg-night/60 px-2 py-0.5 text-[10px] text-dim">{t("hill_sound_hint")}</p>}
                 </div>
-                <button onClick={() => sceneRef.current?.waveMe()} aria-label={t("hill_wave")} title={t("hill_wave")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95" disabled={status !== "open"}>
-                    <Hand size={16} />
-                </button>
+                {/* 감정 표현: 누르면 왼쪽으로 6개가 펼쳐짐 */}
+                <div className="relative">
+                    <button onClick={() => setEmoteOpen((v) => !v)} aria-label={t("emote_title")} title={t("emote_title")} aria-expanded={emoteOpen} className={`glass pointer-events-auto rounded-full p-2 active:scale-95 ${emoteOpen ? "text-star-soft" : "text-muted"}`} disabled={status !== "open"}>
+                        <Smile size={16} />
+                    </button>
+                    <AnimatePresence>
+                        {emoteOpen && (
+                            <motion.div initial={{ opacity: 0, x: 8 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 8 }} className="glass pointer-events-auto absolute right-full top-1/2 mr-2 flex -translate-y-1/2 gap-0.5 rounded-full px-1.5 py-1">
+                                {EMOTES.map((g) => (
+                                    <button
+                                        key={g}
+                                        onClick={() => {
+                                            sceneRef.current?.emote(g);
+                                            setEmoteOpen(false);
+                                        }}
+                                        aria-label={t(`emote_${g}` as "emote_wave")}
+                                        title={t(`emote_${g}` as "emote_wave")}
+                                        className="flex h-8 w-8 items-center justify-center rounded-full text-[18px] active:scale-90 hover:bg-white/10"
+                                    >
+                                        {EMOTE_LABEL[g]}
+                                    </button>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
                 {/* 친구 부르기: 사이트 첫 화면 링크 공유 */}
                 <button onClick={() => setShareOpen(true)} aria-label={t("hill_share")} title={t("hill_share")} className="glass pointer-events-auto rounded-full p-2 text-muted active:scale-95">
                     <Share2 size={16} />

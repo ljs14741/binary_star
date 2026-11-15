@@ -73,6 +73,22 @@ describe("언덕 허브", () => {
         }
     });
 
+    it("감정 표현과 마음 보내기는 같은 언덕에 전달, 없는 사람·자기 자신·너무 잦은 건 무시", () => {
+        const hub = new Hub(150);
+        const a = fakeSocket(), b = fakeSocket();
+        const ma = hub.join(a, "voter-ga", "KR");
+        const mb = hub.join(b, "voter-gb", "KR");
+        hub.handle(ma, JSON.stringify({ t: "gesture", g: "tear" }));
+        expect(last(b)).toEqual({ t: "gesture", id: ma.id, g: "tear" });
+        hub.handle(mb, JSON.stringify({ t: "gift", to: ma.id }));
+        expect(last(a)).toEqual({ t: "gift", from: mb.id, to: ma.id });
+        const n = a.log.length;
+        hub.handle(mb, JSON.stringify({ t: "gift", to: ma.id })); // 1.5초 안 → 무시
+        hub.handle(ma, JSON.stringify({ t: "gift", to: 99999 }));
+        hub.handle(ma, JSON.stringify({ t: "gesture", g: "dance" }));
+        expect(a.log.length).toBe(n);
+    });
+
     it("정원이 차면 다음 언덕으로", () => {
         const hub = new Hub(2);
         hub.join(fakeSocket(), "v1", null);

@@ -1,7 +1,9 @@
 // 언덕 실시간 메시지 형식 (클라이언트·서버 공용). JSON, 작게
 export type Pose = "sit" | "stand";
-export type Gesture = "wave" | "lookup" | "hug";
-export const GESTURES: Gesture[] = ["wave", "lookup", "hug"];
+// 몸짓·감정 표현. wave 손 흔들기, heart 마음, pat 토닥토닥, tear 뭉클, joy 웃음, lookup 별 보기, hug (예전 것, 남겨 둠)
+export type Gesture = "wave" | "heart" | "pat" | "tear" | "joy" | "lookup" | "hug";
+export const GESTURES: Gesture[] = ["wave", "heart", "pat", "tear", "joy", "lookup", "hug"];
+export const EMOTES: Gesture[] = ["wave", "heart", "pat", "tear", "joy", "lookup"]; // 표현 버튼에 펼쳐지는 순서
 
 // 언덕 평면 좌표 범위 (x: 좌우, z: 앞뒤. 카메라는 +z 쪽에서 -z(하늘)를 봄)
 export const HILL_HALF_W = 9;
@@ -22,6 +24,7 @@ export type ClientMsg =
     | { t: "pose"; p: Pose }
     | { t: "gesture"; g: Gesture }
     | { t: "name"; n: string | null }
+    | { t: "gift"; to: number } // 다른 요정에게 마음 보내기
     | { t: "ping" };
 
 export type StarEvent = { kind: "born" | "glow" | "dim"; storyId: number; roomSlug: string; count: number; lang: string; from?: number };
@@ -33,6 +36,7 @@ export type ServerMsg =
     | { t: "tick"; m?: [number, number, number, Pose][]; j?: MemberPublic[]; l?: number[] }
     | { t: "gesture"; id: number; g: Gesture }
     | { t: "name"; id: number; n: string | null }
+    | { t: "gift"; from: number; to: number }
     | { t: "star"; e: StarEvent }
     | { t: "count"; total: number; countries: Record<string, number> }
     | { t: "daily"; e: DailyEvent }

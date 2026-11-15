@@ -28,6 +28,8 @@ export type SceneOpts = {
     onSfx: (name: Sfx) => void;
     // 내 요정을 눌렀을 때(손 흔들기 등) 서버로 보낼 몸짓
     onGesture: (g: Gesture) => void;
+    // 다른 요정을 눌러 마음 보내기
+    onGift: (to: number) => void;
     reduceMotion: boolean;
 };
 
@@ -39,6 +41,8 @@ const HIGHLIGHT_EVERY = 5.5; // 초
 const EMPTY_WAIT = 9; // 빈 별자리에 머무는 시간
 const IDLE_BEFORE_AUTO = 20; // 마지막 조작 뒤 이만큼 지나야 다음 별자리로 자동으로 넘어감
 const WAVE_SEC = 2.2;
+const EMOTE_ICON: Record<Gesture, string> = { wave: "👋", heart: "💛", pat: "🤗", tear: "🥲", joy: "😊", lookup: "✨", hug: "🤗" };
+const GIFT_SEC = 0.9;
 const MOON_AZ = -15, MOON_ELEV = 33; // 달 방위·고도(도). 바다 달빛 길(scenery)도 같은 방위
 const PORTRAIT_CAM_FWD = 3.2; // 세로 화면에서 카메라가 섬 쪽으로 다가가는 거리
 const TAG_H = 0.28, TAG_Y = 1.0; // 별명표 높이·자리(요정 머리 위)
@@ -71,6 +75,10 @@ type Person = {
     tag: THREE.Sprite | null; // 머리 위 별명표
     tagAspect: number;
     tagLift: number; // 다른 이름표와 안 겹치게 위로 올린 높이(월드)
+    joyUntil: number; // 깡충
+    patUntil: number; // 좌우로 토닥토닥
+    tearUntil: number; // 뭉클 (살짝 처짐)
+    bubble: { sprite: THREE.Sprite; born: number } | null; // 머리 위 그림 말풍선
 };
 
 type Constellation = {
@@ -147,6 +155,8 @@ export class HillScene {
     // 하늘(돔·별·별자리·달·오로라·유성)은 아주 멀리 있는 것처럼 카메라를 따라다님. 땅·사람·모닥불은 제자리
     private sky = new THREE.Group();
     private pendingNames = new Map<number, string | null>(); // 사람이 화면에 생기기 전에 온 별명
+    private gifts: { sprite: THREE.Sprite; from: number; to: number; born: number }[] = [];
+    private lastEmote = 0;
     private meId: number | null = null;
     private texCache = new Map<string, Record<CreatureKind, THREE.Texture>>();
     private glowMe: THREE.Texture;
@@ -773,6 +783,53 @@ export class HillScene {
         if (g === "wave") p.waveUntil = now + WAVE_SEC;
         else if (g === "lookup") p.lookUntil = now + 2.5;
         else if (g === "hug") p.happyUntil = now + 1.6;
+        else if (g === "heart") this.hearts(id);
+        else if (g === "pat") {
+            p.patUntil = now + 1.6;
+            p.happyUntil = now + 1.6;
+        } else if (g === "tear") p.tearUntil = now + 2.2;
+        else if (g === "joy") {
+            p.joyUntil = now + 1.4;
+            p.happyUntil = now + 1.4;
+        }
+        if (g !== "hug") this.showBubble(p, EMOTE_ICON[g]);
+    }
+
+    // 머리 위 그림 말풍선 (2.2초 동안 떠올랐다 사라짐)
+    private showBubble(p: Person, icon: string) {
+        if (p.bubble) {
+            p.group.remove(p.bubble.sprite);
+            p.bubble.sprite.material.map?.dispose();
+            p.bubble.sprite.material.dispose();
+        }
+        const t = textTexture(icon, { size: 64, pad: 12 });
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: t.tex, transparent: true, depthWrite: false, depthTest: false }));
+        sp.center.set(0.5, 0);
+        sp.renderOrder = 6;
+        p.group.add(sp);
+        p.bubble = { sprite: sp, born: this.clock.getElapsedTime() };
+    }
+
+    // 내 요정의 감정 표현 (바로 보여 주고, 서버로도 보냄)
+    emote(g: Gesture) {
+        if (this.meId == null) return;
+        const now = performance.now();
+        if (now - this.lastEmote < 1500) return; // 서버 간격 제한과 맞춤
+        this.lastEmote = now;
+        this.gesture(this.meId, g);
+        this.opts.onGesture(g);
+    }
+
+    // 마음 보내기: 보낸 요정에서 받는 요정으로 하트가 날아가고, 받은 요정 둘레에 하트가 퍼짐
+    gift(from: number, to: number) {
+        const a = this.people.get(from), b = this.people.get(to);
+        if (!a || !b) return;
+        a.happyUntil = this.clock.getElapsedTime() + 1.2;
+        const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.heartTex, transparent: true, opacity: 1, depthWrite: false, depthTest: false }));
+        sp.scale.set(0.34, 0.34, 1);
+        sp.renderOrder = 6;
+        this.scene.add(sp);
+        this.gifts.push({ sprite: sp, from, to, born: this.clock.getElapsedTime() });
     }
 
     // 내 요정이 손 흔듦 (바로 보여 주고, 서버로도 보냄)
@@ -865,7 +922,7 @@ export class HillScene {
             group.add(glow);
             this.scene.add(group);
             const now = this.clock.getElapsedTime();
-            p = { id: m.id, group, body, glow, pal, target: new THREE.Vector2(m.x, m.z), pos: new THREE.Vector2(m.x, m.z), pose: m.p, bob: Math.random() * 6.28, nextBlink: now + 2 + Math.random() * 4, blinkUntil: 0, lookUntil: 0, happyUntil: 0, walkUntil: 0, waveUntil: 0, hearts: [], name: null, tag: null, tagAspect: 1, tagLift: 0 };
+            p = { id: m.id, group, body, glow, pal, target: new THREE.Vector2(m.x, m.z), pos: new THREE.Vector2(m.x, m.z), pose: m.p, bob: Math.random() * 6.28, nextBlink: now + 2 + Math.random() * 4, blinkUntil: 0, lookUntil: 0, happyUntil: 0, walkUntil: 0, waveUntil: 0, hearts: [], name: null, tag: null, tagAspect: 1, tagLift: 0, joyUntil: 0, patUntil: 0, tearUntil: 0, bubble: null };
             this.people.set(m.id, p);
             this.applyLook(p);
             const name = m.n ?? this.pendingNames.get(m.id) ?? null;
@@ -972,6 +1029,10 @@ export class HillScene {
         if (p.tag) {
             p.tag.material.map?.dispose();
             p.tag.material.dispose();
+        }
+        if (p.bubble) {
+            p.bubble.sprite.material.map?.dispose();
+            p.bubble.sprite.material.dispose();
         }
         this.people.delete(id);
         this.pendingNames.delete(id);
@@ -1085,6 +1146,17 @@ export class HillScene {
             this.waveMe();
             return;
         }
+        // 다른 요정을 누르면 마음 보내기
+        const other = this.otherTapped(cx, cy, rect);
+        if (other != null && this.meId != null) {
+            const now = performance.now();
+            if (now - this.lastEmote >= 1500) {
+                this.lastEmote = now;
+                this.gift(this.meId, other);
+                this.opts.onGift(other);
+            }
+            return;
+        }
         // 땅(섬)을 누르면 거기로 걸어감. 별·별자리 판정보다 먼저 (폰에서 요정 근처를 눌러도 별자리로 안 넘어가게)
         const ground = this.groundAt(cx, cy);
         if (ground) {
@@ -1123,6 +1195,23 @@ export class HillScene {
     }
 
     // 내 요정 근처를 눌렀나 (화면에서 px 안)
+    // 내 요정이 아닌 가장 가까운 요정 (손가락 36px 안)
+    private otherTapped(cx: number, cy: number, rect: DOMRect, px = 36): number | null {
+        let best: number | null = null, bestD = px;
+        const v = new THREE.Vector3();
+        for (const p of this.people.values()) {
+            if (p.id === this.meId) continue;
+            v.set(p.group.position.x, p.group.position.y + 0.55, p.group.position.z).project(this.camera);
+            if (v.z > 1) continue;
+            const d = Math.hypot(cx - (rect.left + ((v.x + 1) / 2) * rect.width), cy - (rect.top + ((1 - v.y) / 2) * rect.height));
+            if (d < bestD) {
+                bestD = d;
+                best = p.id;
+            }
+        }
+        return best;
+    }
+
     private meTapped(cx: number, cy: number, rect: DOMRect, px = 36): boolean {
         const me = this.meId != null ? this.people.get(this.meId) : null;
         if (!me) return false;
@@ -1352,8 +1441,27 @@ export class HillScene {
             }
             this.place(p);
             const breathe = this.opts.reduceMotion ? 0 : Math.sin(now * 1.6 + p.bob) * 0.02;
-            const hop = walking ? Math.abs(Math.sin(p.bob)) * 0.16 : 0;
+            let hop = walking ? Math.abs(Math.sin(p.bob)) * 0.16 : 0;
+            if (!walking && now < p.joyUntil) hop = Math.abs(Math.sin((p.joyUntil - now) * 9)) * 0.28;
             p.body.position.y = 0.05 + breathe + hop;
+            // 토닥토닥: 좌우로 살짝 기울임. 뭉클: 조금 납작하게 처짐
+            (p.body.material as THREE.SpriteMaterial).rotation = now < p.patUntil ? Math.sin(now * 9) * 0.16 : 0;
+            const droop = now < p.tearUntil ? 0.08 * Math.min(1, (p.tearUntil - now) * 2) : 0;
+            p.body.scale.set(1.15 * (1 + droop * 0.4), 1.15 * (1 - droop), 1);
+            if (p.bubble) {
+                const t = (now - p.bubble.born) / 2.2;
+                if (t >= 1) {
+                    p.group.remove(p.bubble.sprite);
+                    p.bubble.sprite.material.map?.dispose();
+                    p.bubble.sprite.material.dispose();
+                    p.bubble = null;
+                } else {
+                    const s = 0.42 * Math.min(1, t * 6); // 톡 하고 커짐
+                    p.bubble.sprite.scale.set(s, s, 1);
+                    p.bubble.sprite.position.y = TAG_Y + p.tagLift + (p.tag ? TAG_H + 0.04 : 0) + t * 0.25;
+                    p.bubble.sprite.material.opacity = t < 0.75 ? 1 : 1 - (t - 0.75) / 0.25;
+                }
+            }
             // 하트
             p.hearts = p.hearts.filter((h) => {
                 const t = (now - h.born) / 1.4;
@@ -1370,6 +1478,20 @@ export class HillScene {
             });
         }
         this.layoutTags(dt);
+        // 날아가는 하트 (마음 보내기)
+        this.gifts = this.gifts.filter((g) => {
+            const a = this.people.get(g.from), b = this.people.get(g.to);
+            const t = (now - g.born) / GIFT_SEC;
+            if (!a || !b || t >= 1) {
+                this.scene.remove(g.sprite);
+                g.sprite.material.dispose();
+                if (b && t >= 1) this.hearts(g.to);
+                return false;
+            }
+            const e = t * t * (3 - 2 * t);
+            g.sprite.position.set(a.group.position.x + (b.group.position.x - a.group.position.x) * e, a.group.position.y + 0.8 + (b.group.position.y - a.group.position.y) * e + Math.sin(t * Math.PI) * 0.9, a.group.position.z + (b.group.position.z - a.group.position.z) * e);
+            return true;
+        });
 
         // 떠오르는 별
         for (const [id, start] of this.pendingBorn) {

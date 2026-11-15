@@ -114,6 +114,15 @@ export class Hub {
                 this.broadcastHill(member.hill, { t: "gesture", id: member.id, g: msg.g as Gesture });
                 break;
             }
+            case "gift": {
+                // 같은 언덕의 다른 사람에게만. 몸짓과 같은 간격 제한
+                if (typeof msg.to !== "number" || msg.to === member.id) return;
+                if (!member.hill.members.has(msg.to)) return;
+                if (now - member.lastGesture < GESTURE_MIN_INTERVAL) return;
+                member.lastGesture = now;
+                this.broadcastHill(member.hill, { t: "gift", from: member.id, to: msg.to });
+                break;
+            }
             case "name": {
                 // 별명: 글과 같은 검사. 안 맞으면 이름표 없음. 너무 자주 바꾸면 무시
                 if (now - member.lastName < NAME_MIN_INTERVAL) return;
