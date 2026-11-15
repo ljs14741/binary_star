@@ -71,5 +71,6 @@ export function detectLangByScript(text: string, fallback: Lang): Lang {
     if (hangul === max) return "ko";
     if (kana === max || (kana > 0 && han > 0 && kana * 4 > han)) return "ja";
     if (han === max) return "zh-TW";
-    return "en";
+    // 로마자만 있을 땐 꽤 길어야 영어로 봄. "c", "lol" 같은 짧은 글은 화면 언어 그대로 (번역 꺼진 상태에선 언어가 다르면 안 보이므로)
+    return latin >= 8 ? "en" : fallback;
 }

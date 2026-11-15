@@ -33,5 +33,7 @@ describe("언어", () => {
         expect(detectLangByScript("給二十歲的自己", "en")).toBe("zh-TW");
         expect(detectLangByScript("To my younger self", "ko")).toBe("en");
         expect(detectLangByScript("!!! 123", "ja")).toBe("ja");
+        expect(detectLangByScript("c", "ko")).toBe("ko");
+        expect(detectLangByScript("lol ok", "ko")).toBe("ko");
     });
 });
