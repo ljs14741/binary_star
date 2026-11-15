@@ -62,27 +62,18 @@ const ROOMS: RoomSeed[] = [
             "zh-TW": ["給十年後的自己", "到時候一定要回來讀"],
         },
     },
-    // 2026-11-15 추가: 12 별자리를 채우는 주제 5개
+    // 2026-11-15 추가 주제 4개 (12번째 자리는 사용자 제안 몫으로 비워 둠)
     {
         slug: "to-someone-in-heaven", sort: 7,
         i18n: {
-            ko: ["하늘나라에 있는 당신에게", "먼저 떠난 사람에게 끝내 못 한 말"],
-            en: ["To you, up in heaven", "What I never got to say before you left"],
-            ja: ["天国にいるあなたへ", "先に旅立ったあなたに、言えなかったこと"],
-            "zh-TW": ["給在天上的你", "來不及對先走一步的你說的話"],
+            ko: ["먼저 떠난 너에게", "하늘나라로, 무지개다리 너머로 먼저 간 사람과 아이에게"],
+            en: ["To you who left first", "To the people and pets who went ahead of me"],
+            ja: ["先に旅立ったきみへ", "天国へ、虹の橋の向こうへ先に行った人とあの子へ"],
+            "zh-TW": ["給先走一步的你", "給先去了天上、走過彩虹橋的人和毛孩子"],
         },
     },
     {
-        slug: "to-my-pet-over-the-rainbow", sort: 8,
-        i18n: {
-            ko: ["무지개다리 건너간 아이에게", "같이 살아 줘서 고마웠던 내 강아지·고양이에게"],
-            en: ["To my pet over the rainbow bridge", "Thank you for sharing your life with me"],
-            ja: ["虹の橋を渡ったあの子へ", "一緒に生きてくれてありがとう"],
-            "zh-TW": ["給走過彩虹橋的毛孩子", "謝謝你陪我走過的日子"],
-        },
-    },
-    {
-        slug: "to-a-friend-i-lost-touch-with", sort: 9,
+        slug: "to-a-friend-i-lost-touch-with", sort: 8,
         i18n: {
             ko: ["멀어진 친구에게", "연락은 끊겼지만 가끔 생각나는 너에게"],
             en: ["To the friend I drifted from", "We lost touch, but I still think of you"],
@@ -91,7 +82,7 @@ const ROOMS: RoomSeed[] = [
         },
     },
     {
-        slug: "to-my-child", sort: 10,
+        slug: "to-my-child", sort: 9,
         i18n: {
             ko: ["내 아이에게", "언젠가 커서 읽어 줬으면 하는 말"],
             en: ["To my child", "Words I hope you'll read when you're grown"],
@@ -100,7 +91,7 @@ const ROOMS: RoomSeed[] = [
         },
     },
     {
-        slug: "to-you-beside-me", sort: 11,
+        slug: "to-you-beside-me", sort: 10,
         i18n: {
             ko: ["곁에 있는 당신에게", "매일 보면서도 쑥스러워 못 한 말"],
             en: ["To you, right beside me", "What I see you every day and still can't say"],

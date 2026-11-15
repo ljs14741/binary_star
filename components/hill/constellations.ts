@@ -53,8 +53,7 @@ const BY_SLUG: Record<string, string> = {
     "to-me-who-endured": "capricornus", // 인내
     "to-me-in-ten-years": "aquarius", // 미래
     "to-me-this-year": "leo", // 올해의 주인공
-    "to-someone-in-heaven": "scorpius", // 죽음과 다시 태어남
-    "to-my-pet-over-the-rainbow": "taurus", // 우직하게 곁에 있던
+    "to-someone-in-heaven": "scorpius", // 먼저 떠난 사람·아이 (죽음과 다시 태어남)
     "to-a-friend-i-lost-touch-with": "gemini", // 쌍둥이 같던 친구
     "to-my-child": "virgo", // 돌봄
     "to-you-beside-me": "sagittarius", // 같이 가는 길

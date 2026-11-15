@@ -13,7 +13,7 @@
 - 7~13차 상세는 `docs/round7-13.md`, 5·6차 `docs/round5-6.md`, 3·4차 `docs/round4-todo.md`
 
 ## 주제 운영 (2026-11-15 결정)
-- 주제는 하늘 별자리처럼 최대 12개(`TOPIC_SLOTS`). 12개 다 열림(정의는 `scripts/seed.ts`, 별자리 매칭은 `constellations.ts` BY_SLUG). 제안은 공감이 많아도 자동으로 방이 안 됨
+- 주제는 하늘 별자리처럼 최대 12개(`TOPIC_SLOTS`). 11개 열림, 12번째는 첫 사용자 제안 몫(정의는 `scripts/seed.ts`, 별자리 매칭은 `constellations.ts` BY_SLUG). 제안은 공감이 많아도 자동으로 방이 안 됨
 - 매달 관리자 페이지 "이번 달 주제 교체" 버튼: 공감 1위 제안 ↔ 최근 30일 가장 조용한 주제(연 지 30일 안 된 건 유예). 내려간 주제는 `status=closed` 로 글은 남고 읽기만
 
 ## 다음에 할 일
