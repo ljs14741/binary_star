@@ -1,50 +1,40 @@
 # 별말씀(star) — 다음 세션 시작점 (이 파일만 먼저 읽기. 나머지는 필요할 때)
 
 ## 무엇
-가입 없이 모르는 사람의 이야기를 읽고 공감하고 내 이야기를 남기는 곳. 4개 언어(ko·en·ja·zh-TW). 첫 화면 = 실시간 3D "밤의 언덕"(바다 위 섬, 하늘에 황도 12궁, 같이 앉아 있는 별 요정들). Next.js 16 + TS + Tailwind + Prisma(MySQL `star`) + three.js + ws.
-위치 `/home/binary/workspace/binary_star`. git(원격 `ljs14741/binary_star`, master). **push 하면 Jenkins `binaryworld-star` 가 자동 빌드·배포** → https://star.binaryworld.kr (컨테이너 `star-app`). 커밋·푸시는 Claude 가 함. 연달아 푸시하면 컨테이너 이름 충돌로 한 빌드가 실패할 수 있음(다음 빌드가 정리함). 상세 `docs/DEPLOY.md`.
+가입 없이 모르는 사람의 이야기를 읽고 공감하고 내 이야기를 남기는 곳. 4개 언어(ko·en·ja·zh-TW). 첫 화면 = 실시간 3D "밤의 언덕"(바다 위 섬, 하늘에 황도 12궁, 같이 앉은 별 요정). Next.js 16 + TS + Tailwind + Prisma(MySQL `star`) + three.js + ws.
+`/home/binary/workspace/binary_star`, 원격 `ljs14741/binary_star` master. **push → Jenkins `binaryworld-star` 자동 배포** → https://star.binaryworld.kr (컨테이너 `star-app`). 커밋·푸시는 Claude 가 `-c user.name=binary -c user.email=jslee@nemosys.kr` 로. 연달아 푸시하면 한 빌드가 실패할 수 있음(다음 빌드가 정리).
 
-## 지금 상태 (2026-11-15, 7차 배포. 사용자 폰 피드백 대기)
-- 7차: 첫 방문자 피드백("별자리에 주제가 달린 게 뭐냐") 반영. 이름표는 **주제가 주**, 별자리 이름(♈ 양자리)은 그 아래 작고 흐린 보조 글자. 위 헤더는 주제만(별자리 이름은 하늘 이름표에만), 12궁 띠는 기호 대신 점. 달은 정면 왼쪽 별자리 칸 사이 위쪽(az -15·고도 33, `MOON_AZ/MOON_ELEV`)으로 올리고 절반 크기로 줄임(바다 달빛 길도 같은 방위). 황도 12궁 배정·모양은 그대로
-- 테스트 38 · lint · build 통과. 개발 서버 `npm run dev` (localhost:3100, 사용자는 LAN 192.168.219.x 로도 봄)
-- 하늘: 황도 12궁이 360도 고리에 늘 전부(주제 있는 7개 = 이야기 별, 없는 5개 = 흐리게 + "주제 제안하기"). 끌어서 돌아봄(관성), 위 12궁 띠로 위치. 방↔별자리 배정은 `components/hill/constellations.ts`
-- 풍경: 정면 바다·등대, 왼쪽 뒤 오로라, 모닥불, 가끔 돌고래, 달은 정면 왼쪽 별자리 칸 사이 위쪽(az -15·elev 33, 작게). 소리는 효과음만(WebAudio 합성, `lib/sound.ts`). 배경음·별자리 넘김 소리는 폰에서 이상해서 뺌(5차)
-- 조작(5차): 섬이나 내 요정을 잡고 끌면 걷기(손가락 따라감, 발밑 고리 표시), 하늘을 끌면 돌아보기. 땅 누르기가 별·별자리 판정보다 우선. 조작 뒤 20초는 별자리 자동 넘김 안 함(`IDLE_BEFORE_AUTO`). 내 요정 누르기·손 버튼 → 손 흔들기(몸짓은 서버 방송, 합류한 사람도 자동으로 흔듦). 세로(폰) 레이아웃(6차): 3D 안 별자리 이름표 숨김, 문장 카드는 장면이 내보내는 `--hill-horizon`(수평선 %) 바로 위, 카메라가 섬 쪽으로 3.2 당겨짐(`PORTRAIT_CAM_FWD`), 위 안내 한 줄(주제·몇 번째·접속 n/150), 아래 '주제 방' 안내 숨김. PC(가로)는 전과 같음
-- 공유: 카카오·인스타(세로 카드 `/[lang]/s/[id]/story-image`)·X·Threads·LINE·링크 복사. 확인창은 테마 창(`components/Dialog.tsx`). 쓰기 화면에 주제 칩. 수정·삭제는 올린 뒤 10분(화면에 안내). 내 이야기: 머리말 + 지구본(불빛 모인 곳으로 자동 확대)
-- 사용자가 아직 실물로 확인 안 한 것: 6차 폰 레이아웃(요정 크기·카드 위치·끌어 걷기·손 흔들기), 인스타 파일 공유, 폰 fps, 12궁 모양. 사용자가 "은영"이라는 이름을 봤다는데 DB(이야기·번역·방·제안)·코드·문구 어디에도 없음 → 어디서 봤는지 물어볼 것
-- 작업 기록: 5·6차는 `docs/round5-6.md`, 3·4차는 `docs/round4-todo.md`
+## 지금 상태 (2026-11-15 저녁, 13차까지 배포. 친구 테스트 직전)
+- 테스트 39 · lint · build 통과. 개발 서버 `npm run dev`(localhost:3100). 운영은 **클라우드플레어 경유**(무료, 집 IP 숨김, 정적 캐시). 상세 `docs/DEPLOY.md`
+- 결정: **Claude API 키 없이 운영** → 검수는 기본 필터+신고+관리자 페이지, 번역 없음 → 화면 언어 = 글 언어(한국어 화면엔 한국어 글만). 번역 약속 문구는 `aiEnabled()` 로 분기돼 안 나옴
+- 관리자 페이지 `/ko/admin?key=…`(키는 compose `STAR_ADMIN_KEY`·`.env.local`): 접속·방문자·글·공감·방별·최근 글 숨기기/내리기·신고·제안
+- 화면엔 나라만(도시 없음). 지구본은 나라마다 불빛 하나 + 물결. 하늘 이름표는 주제가 주, 별자리 이름은 작게
+- DB: 시드·테스트 글 전부 삭제됨. 사용자가 방마다 진짜 글 3편(이번 달 주제 5편) 쓰는 중
+- 7~13차 상세는 `docs/round7-13.md`, 5·6차 `docs/round5-6.md`, 3·4차 `docs/round4-todo.md`
 
-## 출시 전 체크리스트 (2026-11-15, 친구 테스트 직전)
-- 결정: **Claude API 키 없이 무료로 간다**(검수는 기본 필터+신고, 번역 없음 → 언어별로 자기 언어 글만 보임). 번역 약속 문구(쓰기 화면·올린 뒤·소개)는 `aiEnabled()` 로 분기해 키 없으면 안 나옴(`*_local` 키)
-- 13차: **지역 칩 철회** → 화면엔 나라만(카드·OG·내 이야기). 지구본은 나라마다 불빛 하나(공감 수로 크기, 좌표는 그 나라 공감 좌표 평균) + 퍼지는 물결 2겹(`components/Globe.tsx` ringTexture, 모션 줄임이면 없음). `getMine` 이 나라별로 합침. 시도 단위 지역은 DB 에만(관리 통계용). 쓰기 화면 주제 칩은 PC(md 이상)에서 줄바꿈(가로 스크롤은 마우스로 못 넘김)
-- 12차(철회됨): 쓰기 화면 지역 칩. 서버 추정이 KR 이면 17개 시도 칩(`GET /api/geo` 로 초기값, 추정값 선택됨). 고른 값은 `POST /api/stories` 의 `region` → `applyRegion`(lib/place.ts)이 IP 추정을 덮음. 선택 해제 = 지역 숨김(나라만). 외국은 칩 없음. 이유: KT 등은 IP 가 교환국 기준이라 안양이 용산으로 잡히는 식으로 틀림
-- 11차: 지역 이름. DB-IP 무료판이 한국을 동 단위 영문("Yongsan-dong (Hangang-daero)")으로 줘서, 한국·일본은 시도 단위로 저장(`lib/place.ts` pickPlace, geo.ts 에서 호출)하고 표시 땐 언어별 이름(placeName: 한국 17시도·일본 주요 도도부현·대만 주요 도시, 모르면 영문). 카드·내 이야기·OG 이미지에 적용. 기존 DB 1건은 Seoul 로 고침
-- 10차(2026-11-15 오후): 클라우드플레어 전환 완료(상세 `docs/DEPLOY.md` 클라우드플레어 절). Caddyfile 에 trusted_proxies·www 리다이렉트 넣고 사용자가 reload 함. 클라우드플레어 경유 웹소켓 국가 KR 확인 완료
-- 9차(2026-11-15): 시드 68 + 테스트 글 5 삭제 완료(DB 글 0). **관리자 페이지** `/ko/admin?key=STAR_ADMIN_KEY`(`lib/admin.ts`, `app/[lang]/admin/`, 조치 API `app/api/admin/story`): 지금 접속·오늘/7일/전체 방문자(새 테이블 `visit_day`, `components/VisitBeacon.tsx` 가 세션당 1번 `POST /api/visit`)·글·공감·방별·최근 글 숨기기/공개/내리기·신고·제안. 키는 compose 와 `.env.local`. 카카오 도메인 등록은 사용자가 끝냄
-- 8차 코드: 홈·방 등 공유 썸네일 `app/[lang]/opengraph-image.tsx`(이야기는 `s/[id]/` 것 그대로), 오류 화면 `app/[lang]/error.tsx`
-- 사용자가 할 것: 방마다 진짜 글 3편(이번 달 주제는 5편) 직접 쓰기 → 친구 테스트. ("은영" 이름은 없는 걸로 종결)
-
-## 다음에 할 일 (사용자 피드백 받고 나서)
-1. 사용자 실물 피드백 반영 (위 "확인 안 한 것")
-2. 아직 안 한 것: Claude API 키(compose `ANTHROPIC_API_KEY` → AI 검수·번역 켜짐), 카카오 도메인 등록, 도커 그룹, 정식 오픈 전 `npm run db:clear-seed`. 배포 체크리스트는 `docs/DEPLOY.md`
-3. 사용자 방침: "반응 보고 고치지 말고 처음부터 제대로". 캐릭터·조작은 내 추천대로 가되 사용자가 실물 보고 말해 줌
+## 다음에 할 일
+1. 친구 테스트 피드백 반영 (폰 실물: 요정·끌어 걷기·손 흔들기·인스타 공유·fps·지구본 물결 느낌)
+2. 하늘 12칸 대비: "이번 달 주제"를 달마다 돌리고 지난 방은 보관함(읽기만, 하늘에서 내림). 13번째 방은 지금 하늘에 못 뜸(`assignRooms`)
+3. 백업 cron: 사용자가 `sudo usermod -aG docker binary` 후 `scripts/backup.sh` 를 cron 에
+4. 블로그 글(naver-blog-post 스킬) · 애드센스 콘솔에서 star 서브도메인 확인
+5. 나중에 AI 키 켜면 `ANTHROPIC_API_KEY` 만 compose 에 (검수·번역·문구 자동 복귀)
 
 ## 확인 방법
-- 사람이 볼 땐 `README.md` "밤의 언덕 확인" 1~11
-- 폰 크기 헤드리스 스크린샷·조작 검증 스크립트가 `.tmp/`에 있음(git 밖): `node .tmp/verify.mjs`(390x844: 걷기·하늘 끌기·카드·손 흔들기), `.tmp/verify-short.mjs`(360x640), `.tmp/pc.mjs`, `.tmp/live.mjs`(실서버, 호스트 매핑). 없으면 아래로 다시 만듦
-- 헤드리스: playwright-core(`~/.claude/skills/web-promo-video/tools/node_modules`) + `~/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome` + `--use-angle=swiftshader`. 개발 모드 디버그 `window.__hill.cells()/starScreenPositions()/mePos()/viewAz()/goTo(i)`. 스크린샷은 `.tmp/hill/`
-- 브라우저 B 는 시크릿 + 먼저 `/api/dev/geo?set=JP,Tokyo,35.7,139.7`. 의식 강제 `/api/dev/daily`. 같은 IP 는 이야기당 하루 3번 공감 제한
-- 시드: `npm run db:seed`(방 7 + 테스트 글, 긴 글 2개 포함). 주인 토큰 `data/seed-owner-token.txt` → `/ko/me/{token}`
+- 운영 확인은 클라우드플레어 IP 로: `ip=$(dig +short A star.binaryworld.kr @peter.ns.cloudflare.com | head -1); curl --resolve star.binaryworld.kr:443:$ip https://star.binaryworld.kr/ko` (이 PC 에선 공인 IP 헤어핀 안 됨. 시스템 DNS 캐시가 옛 IP 를 줄 수 있음)
+- 헤드리스 캡처: playwright-core(`~/.claude/skills/web-promo-video/tools/node_modules`) + `~/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome` + `--use-angle=swiftshader`, `waitUntil: "load"`(networkidle 은 dev 에서 타임아웃). 스크립트·스크린샷은 `.tmp/`(git 밖). 개발 디버그 `window.__hill.*`
+- 브라우저 B 는 시크릿 + `/api/dev/geo?set=JP,Tokyo,35.7,139.7`. 의식 강제 `/api/dev/daily`. 시드 `npm run db:seed`(출시 전 `db:clear-seed`)
+- 임시 글은 `.tmp/*.ts` 에서 `../lib/prisma` 로 만들고 끝나면 꼭 삭제 (story 에 lat/lng 없음, empathy 에 있음)
 
 ## 함정 (꼭 지킬 것)
-- `server.ts` 는 `import "./lib/load-env"` 가 **첫 import** (아니면 voter_key 가 어긋나 "내가 공감"을 못 알아봄)
-- Next 16 커스텀 서버: decoy httpServer + 내부 `upgradeHandler` 구조 바꾸지 말 것. `lib/realtime/*` 같은 서버 코드는 dev 서버 재시작 필요
-- React lint: 렌더 중 `useRef.current` 읽기·컴포넌트 정의 금지 → `useState(() => new X())`, 모듈 수준 컴포넌트
-- 하늘 위 요소는 폰 헤더(위 ~17도)에 가림 → 고도 48도 아래. 세로 화면에선 카메라가 3.2 앞으로 가 있어 정면 별자리가 2~3도 높게 보임
-- Claude 는 docker 그룹이 아님(`sudo` 도 못 씀). 컨테이너 로그는 사용자가 `sudo docker logs star-app`. 이 PC 에서 공인 도메인은 헤어핀 NAT 로 안 열림 → `curl --resolve star.binaryworld.kr:443:127.0.0.1 https://star.binaryworld.kr/ko` 또는 크롬 `--host-resolver-rules`
-- 시드 글만 추가할 땐 `.tmp/` 안에 tsx 두고 `../lib/prisma` import (scratchpad 에선 dotenv 못 찾음)
+- `server.ts` 는 `import "./lib/load-env"` 가 **첫 import**
+- Next 16 커스텀 서버: decoy httpServer + `upgradeHandler` 구조 바꾸지 말 것. 서버 코드·Prisma 스키마 바꾸면 dev 서버 재시작(`ps -eo pid,user,args` 로 binary 소유 `tsx server.ts` 만 kill. `pkill -f` 는 자기 셸까지 죽임)
+- React lint: 렌더 중 `useRef.current` 읽기·컴포넌트 정의 금지
+- 하늘 위 요소는 폰 헤더에 가림 → 고도 48도 아래. 세로 화면은 카메라가 3.2 앞
+- Claude 는 docker 그룹 아님, `sudo` 불가, Caddyfile 은 root 소유(수정은 `Caddyfile.new` 만들어 사용자가 cp+reload). compose(`/home/binary/binaryworld/infra/docker-compose.yml`)는 수정 가능
+- 클라우드플레어 뒤라 Caddy `trusted_proxies` 필수(없으면 모든 IP 가 HK). 앱은 X-Forwarded-For 첫 값 사용
+- 로마자 8글자 미만 글은 화면 언어로 저장(`detectLangByScript`)
 - MySQL 비밀번호 탐색 금지
 
 ## 파일 지도
-`server.ts`(Next+ws 같은 포트) · `lib/realtime/`(hub·protocol·emit, FIRE_POS) · `lib/hill.ts`(방별 별 10개·오늘의 이야기) · `lib/sound.ts` · `components/hill/`(HillScene three.js · Hill 화면 · sky 고리 배치 · constellations 12궁 · scenery 풍경 · sprites 요정·글자 · useHillSocket) · `components/{Dialog,ShareSheet,StoryCard,WriteForm,MyPage,Globe}.tsx` · `messages/*.ts`(키는 ko 기준, 4개 언어 키 일치 테스트 있음) · `tests/`
-기획 `docs/plan.md`(1~14·17~19 유효, 15~16 은 20~22 로 대체) · 작업 기록 `docs/round4-todo.md`(3·4차), `docs/history/`(1·2차)
+`server.ts`(Next+ws) · `lib/realtime/` · `lib/hill.ts` · `lib/admin.ts` · `lib/place.ts` · `lib/geo.ts` · `lib/sound.ts` · `components/hill/`(HillScene·Hill·sky·constellations·scenery·sprites·useHillSocket) · `components/{Dialog,ShareSheet,StoryCard,WriteForm,MyPage,Globe,VisitBeacon}.tsx` · `app/[lang]/admin/` · `messages/*.ts`(4개 언어 키 일치 테스트) · `tests/`
+기획 `docs/plan.md`(1~14·17~19 유효) · 배포·클라우드플레어 `docs/DEPLOY.md`
