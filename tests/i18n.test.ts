@@ -68,3 +68,13 @@ describe("별명 검사", () => {
         expect(checkNickname("  ")).toEqual({ ok: true, value: null });
     });
 });
+
+import { maskDonorName } from "@/lib/donations-shared";
+describe("후원자 이름 가림", () => {
+    it("가운데 글자를 가림", () => {
+        expect(maskDonorName("김민수")).toBe("김*수");
+        expect(maskDonorName("김수")).toBe("김*");
+        expect(maskDonorName("남궁민수")).toBe("남**수");
+        expect(maskDonorName("L")).toBe("L");
+    });
+});

@@ -19,6 +19,7 @@ import { assignRooms, ZODIAC } from "./constellations";
 import { setSoundPref, Sound, soundPref } from "@/lib/sound";
 import { useHillSocket } from "./useHillSocket";
 import ShareSheet from "@/components/ShareSheet";
+import DonorWall from "@/components/DonorWall";
 import { siteName } from "@/lib/site";
 
 type Props = { initialTotal: number };
@@ -42,7 +43,7 @@ function useSound() {
     const arm = useCallback(() => {
         if (!on) return;
         snd.start();
-        setArmed(true);
+        void snd.resume().then((ok) => ok && setArmed(true));
     }, [on, snd]);
     const toggle = useCallback(() => {
         const next = !on;
@@ -55,14 +56,19 @@ function useSound() {
     }, [on, snd]);
     useEffect(() => {
         if (!on) return;
-        const once = () => arm();
-        window.addEventListener("pointerdown", once, { once: true });
-        window.addEventListener("keydown", once, { once: true });
+        // 브라우저마다 소리를 허락하는 순간이 다름: 아이폰은 손가락이 닿을 때도 되지만, 안드로이드 크롬은 손을 뗄 때(pointerup·touchend·click)만 됨
+        // 그래서 여러 입력에 걸어 두고, 실제로 소리가 나기 시작하면 뗌
+        const events = ["pointerdown", "pointerup", "touchend", "click", "keydown"] as const;
+        const off = () => events.forEach((ev) => window.removeEventListener(ev, tryArm));
+        function tryArm() {
+            arm();
+            void snd.resume().then((ok) => ok && off());
+        }
+        events.forEach((ev) => window.addEventListener(ev, tryArm, { passive: true }));
         const vis = () => snd.setHidden(document.visibilityState === "hidden");
         document.addEventListener("visibilitychange", vis);
         return () => {
-            window.removeEventListener("pointerdown", once);
-            window.removeEventListener("keydown", once);
+            off();
             document.removeEventListener("visibilitychange", vis);
         };
     }, [on, arm, snd]);
@@ -377,6 +383,9 @@ function Hill3D({ initialTotal }: Props) {
             </div>
             <BottomSheet open={donateOpen} onClose={() => setDonateOpen(false)} title={t("donate_title")}>
                 <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink/90">{t("donate_body")}</p>
+                <p className="mt-1 text-[14px] font-semibold text-star-soft">{t("donate_chicken")}</p>
+                <p className="mt-1 text-[12px] text-dim">{t("donate_free")}</p>
+                {donateOpen && <DonorWall />}
                 <a href={DONATE_URL} target="_blank" rel="noopener noreferrer" className="btn-star mt-5 flex h-11 w-full items-center justify-center gap-2 rounded-full text-sm font-semibold">
                     <Coffee size={16} /> {t("donate_pay")}
                 </a>

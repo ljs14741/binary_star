@@ -4,6 +4,7 @@ import { isAdmin, getAdminStats, getSwapPlan, TOPIC_SLOTS, type AdminStory } fro
 import { flagEmoji, formatDate } from "@/lib/format";
 import AdminActions from "./AdminActions";
 import TopicSwap from "./TopicSwap";
+import AdminDonations from "./AdminDonations";
 import AdminLogin from "./AdminLogin";
 import AdminRemember from "./AdminRemember";
 
@@ -113,6 +114,9 @@ export default async function AdminPage({ params, searchParams }: P) {
 
             <h2 className="mt-6 text-sm font-semibold text-ink">이번 달 주제 교체</h2>
             <TopicSwap plan={plan} slots={TOPIC_SLOTS} adminKey={adminKey} />
+
+            <h2 className="mt-6 text-sm font-semibold text-ink">후원 내역 (카카오페이 받은 것 직접 입력)</h2>
+            <AdminDonations adminKey={adminKey} />
 
             <h2 className="mt-6 text-sm font-semibold text-ink">제안된 주제 {st.proposals.length}</h2>
             {st.proposals.length === 0 && <p className="mt-2 text-[12px] text-dim">아직 없어요</p>}

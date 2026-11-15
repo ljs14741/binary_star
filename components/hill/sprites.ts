@@ -18,8 +18,8 @@ function makeTexture(c: HTMLCanvasElement): THREE.Texture {
     return t;
 }
 
-export type CreatureKind = "idle" | "blink" | "lookup" | "walk1" | "walk2" | "happy" | "wave1" | "wave2";
-export const CREATURE_KINDS: CreatureKind[] = ["idle", "blink", "lookup", "walk1", "walk2", "happy", "wave1", "wave2"];
+export type CreatureKind = "idle" | "blink" | "lookup" | "walk1" | "walk2" | "happy" | "wave1" | "wave2" | "sad";
+export const CREATURE_KINDS: CreatureKind[] = ["idle", "blink", "lookup", "walk1", "walk2", "happy", "wave1", "wave2", "sad"];
 export type Palette = { body: string; shade: string; glow: string };
 
 // 다른 사람 색 (id 로 돌려 씀). 나는 따뜻한 노랑
@@ -56,7 +56,8 @@ export function creatureTexture(kind: CreatureKind, pal: Palette): THREE.Texture
     g.strokeStyle = pal.shade;
     g.lineWidth = 7;
     g.lineCap = "round";
-    const armY = walk ? -2 : 4;
+    const sad = kind === "sad";
+    const armY = walk ? -2 : sad ? 12 : 4; // 슬프면 팔이 축 처짐
     const armOut = walk ? 1.25 : 1;
     g.beginPath();
     g.moveTo(-r * 0.75, 2);
@@ -116,6 +117,25 @@ export function creatureTexture(kind: CreatureKind, pal: Palette): THREE.Texture
             g.fillStyle = "#1b1a2e";
         }
     }
+    // 슬픔: 가운데가 올라간 눈썹 + 한쪽 눈 아래 눈물
+    if (sad) {
+        g.strokeStyle = "#1b1a2e";
+        g.lineWidth = 2.4;
+        g.beginPath();
+        for (const sgn of [-1, 1]) {
+            g.moveTo(sgn * (ex - 6), ey - 12.5);
+            g.lineTo(sgn * (ex + 6), ey - 8.5);
+        }
+        g.stroke();
+        g.fillStyle = "#8fd8ff";
+        g.beginPath();
+        const tx = -ex - 1, ty = ey + 8;
+        g.moveTo(tx, ty);
+        g.bezierCurveTo(tx + 4.5, ty + 6, tx + 4, ty + 11, tx, ty + 11);
+        g.bezierCurveTo(tx - 4, ty + 11, tx - 4.5, ty + 6, tx, ty);
+        g.fill();
+        g.fillStyle = "#1b1a2e";
+    }
     // 볼
     g.fillStyle = "rgba(255,120,150,0.35)";
     for (const sgn of [-1, 1]) {
@@ -128,6 +148,7 @@ export function creatureTexture(kind: CreatureKind, pal: Palette): THREE.Texture
     g.lineWidth = 2;
     g.beginPath();
     if (kind === "happy" || wave) g.arc(0, ey + 9, 4, 0.15 * Math.PI, 0.85 * Math.PI);
+    else if (sad) g.arc(0, ey + 14, 4, 1.2 * Math.PI, 1.8 * Math.PI); // 시무룩한 입
     else g.arc(0, ey + 8, 2.4, 0.2 * Math.PI, 0.8 * Math.PI);
     g.stroke();
     g.restore();

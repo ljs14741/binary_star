@@ -33,9 +33,28 @@ export class Sound {
         return this.running;
     }
 
+    // 실제로 소리가 나는 상태인지 (브라우저가 막으면 suspended 로 남음)
+    get audible(): boolean {
+        return this.running && !!this.ctx && this.ctx.state === "running";
+    }
+
+    // 막혀 있으면 다시 깨움. 사용자 입력 안에서 부를 것. 소리가 나는 상태가 되면 true
+    async resume(): Promise<boolean> {
+        if (!this.ctx) return false;
+        try {
+            if (this.ctx.state !== "running") await this.ctx.resume();
+        } catch {
+            /* 무시 */
+        }
+        return this.ctx.state === "running";
+    }
+
     // 사용자 입력 안에서 호출
     start() {
-        if (this.running) return;
+        if (this.running) {
+            void this.resume();
+            return;
+        }
         try {
             if (!this.ctx) {
                 const AC = window.AudioContext || (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;

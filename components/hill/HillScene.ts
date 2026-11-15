@@ -1429,6 +1429,7 @@ export class HillScene {
                     p.nextBlink = now + 2.5 + Math.random() * 4;
                 }
                 if (now < p.waveUntil) kind = Math.sin(now * 11) > 0 ? "wave1" : "wave2";
+                else if (now < p.tearUntil) kind = "sad";
                 else if (now < p.happyUntil) kind = "happy";
                 else if (now < p.blinkUntil) kind = "blink";
                 else if (now < p.lookUntil) kind = "lookup";
