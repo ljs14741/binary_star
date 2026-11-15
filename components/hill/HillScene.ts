@@ -724,6 +724,20 @@ export class HillScene {
         return HIGHLIGHT_EVERY;
     }
 
+    // 방금 쓴 내 별: 그 별자리로 돌고 별이 톡 커지며(태어나는 움직임) 강조. 하늘에 없으면 false
+    celebrateStar(id: number): boolean {
+        const i = this.starIndex.get(id);
+        if (i == null) return false;
+        const now = this.clock.getElapsedTime();
+        this.starList[i].mine = true;
+        this.mineIds.add(id);
+        this.writeStar(i, now, now);
+        for (const k of ["aSize", "aAlpha", "aBorn", "aColor"]) (this.starGeo.attributes[k] as THREE.BufferAttribute).needsUpdate = true;
+        this.highlightById(id);
+        this.lastInputAt = now;
+        return true;
+    }
+
     // 특정 별 강조 (문장 카드를 눌렀을 때 등)
     highlightById(id: number) {
         const i = this.starIndex.get(id);

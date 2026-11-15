@@ -111,6 +111,17 @@ function Hill3D({ initialTotal }: Props) {
     const [wishCrisis, setWishCrisis] = useState(false);
     const [wishListOpen, setWishListOpen] = useState(false);
     const [topicOpen, setTopicOpen] = useState(false); // 주제 판 (제목·점을 누르면)
+    // 글을 쓰고 돌아오면(?born=ID&room=slug) 하늘이 그 별자리로 돌고 내 별이 톡 커짐
+    const [born, setBorn] = useState<{ id: number; room: string } | null>(() => {
+        if (typeof window === "undefined") return null;
+        try {
+            const u = new URL(window.location.href);
+            const id = Number(u.searchParams.get("born"));
+            return id ? { id, room: u.searchParams.get("room") ?? "" } : null;
+        } catch {
+            return null;
+        }
+    });
     const [wishes, setWishes] = useState<{ count: number; items: WishItem[] }>({ count: 0, items: [] });
     const loadWishes = useCallback(() => {
         void api<{ count: number; items: WishItem[] }>("/api/wishes").then((r) => {
@@ -320,6 +331,35 @@ function Hill3D({ initialTotal }: Props) {
             if (sitTimer.current) clearTimeout(sitTimer.current);
         };
     }, [bridge, openStory, flash, t, sound, lang, markDrag]);
+
+    useEffect(() => {
+        if (!born || !sky) return;
+        let tries = 0;
+        let tm: ReturnType<typeof setTimeout>;
+        const tryIt = () => {
+            const scene = sceneRef.current;
+            if (!scene) {
+                if (tries++ < 20) tm = setTimeout(tryIt, 300);
+                return;
+            }
+            // 하늘에 아직 없으면(윗별 10개에 못 들어감) 그 별자리로만 돎
+            if (!scene.celebrateStar(born.id)) {
+                const zi = assignRooms(sky.rooms.map((r) => r.slug)).get(born.room);
+                if (zi != null) scene.goTo(zi);
+            }
+            sound.sfx("born");
+            flash(t("hill_my_star_born"));
+            setBorn(null);
+            try {
+                const u = new URL(window.location.href);
+                u.searchParams.delete("born");
+                u.searchParams.delete("room");
+                history.replaceState(null, "", u.toString());
+            } catch {}
+        };
+        tm = setTimeout(tryIt, 700); // 하늘 자료가 장면에 들어간 뒤
+        return () => clearTimeout(tm);
+    }, [born, sky, flash, t, sound]);
 
     // 하늘(별자리) 불러오기
     useEffect(() => {
@@ -538,6 +578,14 @@ function Hill3D({ initialTotal }: Props) {
                     setWishTapped(null);
                     setWishListOpen(true);
                 }}
+                onNext={
+                    wishes.items.length > 1
+                        ? () => {
+                              const k = wishes.items.findIndex((w) => w.id === wishTapped);
+                              setWishTapped(wishes.items[(k + 1) % wishes.items.length].id);
+                          }
+                        : undefined
+                }
             />
             <WishList open={wishListOpen} items={wishes.items} onClose={() => setWishListOpen(false)} onCheer={cheerWish} />
             {/* 주제 판: 12칸 한눈에. 누르면 하늘이 그 별자리로 돎 */}
@@ -561,7 +609,16 @@ function Hill3D({ initialTotal }: Props) {
                                 </li>
                             );
                         return (
-                            <li key={s.zodiac.name}>
+                            <li key={s.zodiac.name} className="relative">
+                                {/* 바로 글쓰기 */}
+                                <Link
+                                    href={langPath(lang, `/room/${s.room.slug}/write`)}
+                                    aria-label={`${s.room.title} · ${t("hill_write")}`}
+                                    title={t("hill_write")}
+                                    className="absolute right-1.5 top-1.5 z-10 rounded-full p-1.5 text-star-soft hover:bg-star/15 active:scale-95"
+                                >
+                                    <PenLine size={14} />
+                                </Link>
                                 <button
                                     onClick={() => {
                                         setTopicOpen(false);
@@ -570,7 +627,7 @@ function Hill3D({ initialTotal }: Props) {
                                     aria-current={now ? "true" : undefined}
                                     className={`glass flex h-full w-full flex-col justify-between rounded-2xl px-3 py-2.5 text-left active:scale-[0.98] ${now ? "!border-star/60 !bg-star/15" : ""}`}
                                 >
-                                    <span className={`break-keep text-[14px] font-semibold leading-snug ${now ? "text-star" : "text-ink"}`}>{s.room.title}</span>
+                                    <span className={`break-keep pr-6 text-[14px] font-semibold leading-snug ${now ? "text-star" : "text-ink"}`}>{s.room.title}</span>
                                     <span className="mt-1.5 text-[11px] text-dim">
                                         {s.zodiac.names[lang]} · {t("topics_count", { n: formatNumber(s.room.count, lang) })}
                                     </span>
@@ -612,7 +669,7 @@ function Hill3D({ initialTotal }: Props) {
             />
 
             {/* 지금 밝아진 별의 첫 문장 (빈 별자리면 안내). 세로(폰)에선 수평선 바로 위(이름표 대신) 라 요정을 안 가림, 가로(PC)는 가운데 */}
-            <div className="pointer-events-none absolute inset-x-0 flex justify-center px-5 portrait:top-[var(--hill-horizon,66%)] portrait:-translate-y-[calc(100%+8px)] landscape:top-[60%]">
+            <div className="pointer-events-none absolute inset-x-0 flex justify-center px-5 portrait:top-[var(--hill-horizon,66%)] portrait:-translate-y-[calc(100%+36px)] landscape:top-[54%]">
                 <AnimatePresence mode="wait">
                     {slot && !room && !highlight && (
                         <motion.div
@@ -670,10 +727,6 @@ function Hill3D({ initialTotal }: Props) {
                 >
                     <PenLine size={15} /> {t("hill_write")}
                 </Link>
-                {/* 아래에 주제 방이 더 있다는 안내 (폰에서도 보이게) */}
-                <a href="#rooms" className="pointer-events-auto flex items-center gap-1 text-[11px] text-dim landscape:text-[12px]">
-                    {t("hill_scroll")} <ChevronDown size={14} className="animate-bounce" />
-                </a>
             </div>
 
             {/* 하늘 돌리기 힌트 (처음 한 번) */}
@@ -761,7 +814,7 @@ function HillFallback({ total }: { total: number }) {
             {total > 1 && <p className="text-lg font-semibold text-ink">{t("hill_watching", { n: formatNumber(total, lang) })}</p>}
             <Stargazer caption={false} />
             <Link href={langPath(lang, "#rooms")} className="text-sm text-star-soft">
-                {t("hill_scroll")}
+                {t("topics_title")}
             </Link>
         </section>
     );

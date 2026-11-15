@@ -118,7 +118,7 @@ function CheerButton({ w, onCheer, small }: { w: WishItem; onCheer: (id: number)
     );
 }
 
-export function WishView({ wish, onClose, onCheer, onOpenList }: { wish: WishItem | null; onClose: () => void; onCheer: (id: number) => void; onOpenList: () => void }) {
+export function WishView({ wish, onClose, onCheer, onOpenList, onNext }: { wish: WishItem | null; onClose: () => void; onCheer: (id: number) => void; onOpenList: () => void; onNext?: () => void }) {
     const t = useT();
     const [reported, setReported] = useState<number | null>(null);
     const report = async () => {
@@ -135,6 +135,11 @@ export function WishView({ wish, onClose, onCheer, onOpenList }: { wish: WishIte
                         <CheerButton w={wish} onCheer={onCheer} />
                     </div>
                     <div className="mt-4 flex items-center justify-center gap-4 text-[12px]">
+                        {onNext && (
+                            <button onClick={onNext} className="rounded-full border border-star/30 px-3 py-1 text-star-soft active:scale-95">
+                                {t("wish_next")}
+                            </button>
+                        )}
                         <button onClick={onOpenList} className="text-star-soft underline-offset-2 hover:underline">
                             {t("wish_all")}
                         </button>

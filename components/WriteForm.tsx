@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Link2, Send, Share2, Check, KeyRound, Dices } from "lucide-react";
+import { Link2, Send, Share2, Check, KeyRound, Dices, Sparkles } from "lucide-react";
 import type { StoryView } from "@/lib/stories";
 import { AGE_GROUPS, NICKNAME_MAX_LEN, STORY_MAX_LEN } from "@/lib/site";
 import { checkNickname, randomNickname } from "@/lib/nickname";
@@ -119,9 +119,15 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
                 <p className="mt-2 text-center text-[11px] text-dim">{t("after_edit_window")}</p>
                 <div className="mt-5 grid gap-2">
                     {isPublic && (
-                        <button onClick={() => setShare("story")} className="btn-star flex h-12 items-center justify-center gap-2 rounded-full font-semibold">
-                            <Share2 size={17} /> {t("after_share")}
-                        </button>
+                        <>
+                            {/* 언덕으로 돌아가 내 별이 뜬 자리를 봄 */}
+                            <Link href={`${langPath(lang, "/")}?born=${done.story.id}&room=${roomSlug}`} className="btn-star flex h-12 items-center justify-center gap-2 rounded-full font-semibold">
+                                <Sparkles size={17} /> {t("after_see_star")}
+                            </Link>
+                            <button onClick={() => setShare("story")} className="glass flex h-12 items-center justify-center gap-2 rounded-full font-semibold text-ink">
+                                <Share2 size={17} /> {t("after_share")}
+                            </button>
+                        </>
                     )}
                     <div className={`rounded-2xl border p-3 ${linkSaved ? "border-line" : "border-star/50 bg-star/10"}`}>
                         <p className="mb-2 flex items-start gap-1.5 text-xs leading-relaxed text-muted">
@@ -163,7 +169,12 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
                     <p className="mb-1.5 text-xs text-muted">{t("write_room_label")}</p>
                     <div className="flex gap-1.5 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:flex-wrap md:overflow-visible">
                         {rooms.map((r) => (
-                            <button key={r.slug} type="button" onClick={() => pickRoom(r.slug)} className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] transition ${r.slug === roomSlug ? "btn-star font-semibold" : "glass text-muted"}`}>
+                            <button
+                                key={r.slug}
+                                type="button"
+                                onClick={() => pickRoom(r.slug)}
+                                className={`shrink-0 rounded-full px-3 py-1.5 text-[13px] transition ${r.slug === roomSlug ? "btn-star font-semibold" : "glass text-muted"}`}
+                            >
                                 {r.title}
                             </button>
                         ))}
@@ -192,7 +203,13 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
                     maxLength={NICKNAME_MAX_LEN}
                     className="glass min-w-0 flex-1 rounded-2xl px-4 py-2.5 text-[16px] text-ink placeholder:text-dim"
                 />
-                <button type="button" onClick={() => changeNickname(randomNickname(lang, Math.random, nickname))} aria-label={t("nickname_reroll")} title={t("nickname_reroll")} className="glass flex shrink-0 items-center gap-1.5 rounded-2xl px-3 text-[13px] text-muted active:scale-95">
+                <button
+                    type="button"
+                    onClick={() => changeNickname(randomNickname(lang, Math.random, nickname))}
+                    aria-label={t("nickname_reroll")}
+                    title={t("nickname_reroll")}
+                    className="glass flex shrink-0 items-center gap-1.5 rounded-2xl px-3 text-[13px] text-muted active:scale-95"
+                >
                     <Dices size={16} /> {t("nickname_reroll")}
                 </button>
             </div>
@@ -201,12 +218,7 @@ export default function WriteForm({ roomSlug: initialSlug, roomTitle: initialTit
             <p className="mb-2 mt-4 text-sm text-muted">{t("write_age")}</p>
             <div className="flex flex-wrap gap-2">
                 {AGE_GROUPS.map((g) => (
-                    <button
-                        key={g}
-                        type="button"
-                        onClick={() => setAge(age === g ? null : g)}
-                        className={`rounded-full px-3 py-1.5 text-sm transition ${age === g ? "btn-star font-semibold" : "glass text-muted"}`}
-                    >
+                    <button key={g} type="button" onClick={() => setAge(age === g ? null : g)} className={`rounded-full px-3 py-1.5 text-sm transition ${age === g ? "btn-star font-semibold" : "glass text-muted"}`}>
                         {t(`age_${g}` as "age_20s")}
                     </button>
                 ))}

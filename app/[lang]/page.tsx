@@ -3,7 +3,8 @@ import { getFeaturedRoom, listRooms } from "@/lib/rooms";
 import { requireLang, alternates } from "@/lib/page";
 import { t } from "@/lib/i18n";
 import { getBaseUrl, siteName } from "@/lib/site";
-import RoomList, { FeaturedBanner } from "@/components/RoomList";
+import Link from "next/link";
+import { FeaturedBanner } from "@/components/RoomList";
 import Hill from "@/components/hill/Hill";
 import { getPresence } from "@/lib/hill";
 
@@ -33,19 +34,25 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
     return (
         <div className="pb-6">
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-            {/* 첫 화면: 밤의 언덕 (실시간). 아래는 방 목록 (검색 엔진·느린 기기용 글자) */}
+            {/* 첫 화면: 밤의 언덕 (실시간). 주제 목록은 언덕 위 "주제 한눈에"로 옮김. 아래는 검색 엔진·WebGL 없는 기기용 글자 링크만 */}
             <Hill initialTotal={presence.total} />
-            <div id="rooms" className="scroll-mt-14 px-4 pt-3">
-            <section className="mb-5 pt-4 text-center">
-                <h1 className="text-2xl font-semibold leading-snug text-ink">{t(lang, "home_title")}</h1>
-                <p className="mt-2 text-sm text-muted">{t(lang, "home_sub")}</p>
-            </section>
-            {featured && (
-                <div className="mb-4">
-                    <FeaturedBanner room={featured} lang={lang} />
-                </div>
-            )}
-            <RoomList rooms={list} lang={lang} />
+            <div id="rooms" className="scroll-mt-14 px-4 pt-5">
+                <section className="text-center">
+                    <h1 className="text-xl font-semibold leading-snug text-ink">{t(lang, "home_title")}</h1>
+                    <p className="mt-1.5 text-sm text-muted">{t(lang, "home_sub")}</p>
+                </section>
+                {featured && (
+                    <div className="mt-4">
+                        <FeaturedBanner room={featured} lang={lang} />
+                    </div>
+                )}
+                <p className="mt-4 flex flex-wrap justify-center gap-x-3 gap-y-1.5 text-[12px] text-dim">
+                    {list.map((r) => (
+                        <Link key={r.slug} href={`/${lang}/room/${r.slug}`} className="underline-offset-4 hover:text-ink hover:underline">
+                            {r.title}
+                        </Link>
+                    ))}
+                </p>
             </div>
         </div>
     );
