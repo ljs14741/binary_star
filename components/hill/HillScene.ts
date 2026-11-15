@@ -75,11 +75,11 @@ type Constellation = {
     starIds: number[]; // 진짜 별(이야기)만
     lines: THREE.LineSegments;
     linePairs: [number, number][]; // buffer index 쌍
-    label: THREE.Sprite; // 별자리 이름
+    label: THREE.Sprite; // 주 이름표: 주제 방 이름 (없으면 안내)
     labelAspect: number;
-    sub: THREE.Sprite; // 주제 방 이름 (없으면 안내)
+    labelLines: number;
+    sub: THREE.Sprite; // 보조: 별자리 이름 (작고 흐리게)
     subAspect: number;
-    subLines: number;
     scale: number;
     scaleTarget: number;
 };
@@ -417,15 +417,15 @@ export class HillScene {
             lgeo.setAttribute("position", new THREE.BufferAttribute(new Float32Array(linePairs.length * 6), 3));
             const lines = new THREE.LineSegments(lgeo, new THREE.LineBasicMaterial({ color: 0xc9d4ff, transparent: true, opacity: 0.12, depthWrite: false, blending: THREE.AdditiveBlending }));
             this.scene.add(lines);
-            // 이름표: 별자리 이름 + 주제 방 이름(없으면 안내)
-            const zl = textTexture(`${shape.symbol} ${shape.names[this.opts.lang]}`, { size: 44, color: "#ffffff", font: "600", pad: 24 });
+            // 이름표: 주제 방 이름이 주(없으면 안내), 그 아래 별자리 이름은 작고 흐리게
+            const labelText = room ? wrapTitle(room.title, this.isMobile ? 9 : 12) : this.opts.emptyLabel;
+            const zl = textTexture(labelText, { size: 44, color: "#ffffff", font: room ? "600" : "400", pad: 24 });
             const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: zl.tex, transparent: true, depthWrite: false, opacity: 0.6 }));
-            const subText = room ? wrapTitle(room.title, this.isMobile ? 9 : 12) : this.opts.emptyLabel;
-            const sl = textTexture(subText, { size: 40, color: "#ffffff", font: room ? "600" : "400", pad: 24 });
-            const sub = new THREE.Sprite(new THREE.SpriteMaterial({ map: sl.tex, transparent: true, depthWrite: false, opacity: 0.5 }));
+            const sl = textTexture(`${shape.symbol} ${shape.names[this.opts.lang]}`, { size: 30, color: "#ffffff", font: "400", pad: 20 });
+            const sub = new THREE.Sprite(new THREE.SpriteMaterial({ map: sl.tex, transparent: true, depthWrite: false, opacity: 0.3 }));
             this.scene.add(label, sub);
             const sc = prevScale.get(zi) ?? (zi === this.index ? this.selScale : 1);
-            this.constellations.push({ index: zi, shape, slug: room?.slug ?? null, title: room?.title ?? null, cell, starIds: ids, lines, linePairs, label, labelAspect: zl.aspect, sub, subAspect: sl.aspect, subLines: subText.split("\n").length, scale: sc, scaleTarget: sc });
+            this.constellations.push({ index: zi, shape, slug: room?.slug ?? null, title: room?.title ?? null, cell, starIds: ids, lines, linePairs, label, labelAspect: zl.aspect, labelLines: labelText.split("\n").length, sub, subAspect: sl.aspect, scale: sc, scaleTarget: sc });
         });
         this.starGeo.setDrawRange(0, this.starList.length);
         this.applyLabelVisibility();
@@ -454,17 +454,19 @@ export class HillScene {
         });
         lp.needsUpdate = true;
         c.lines.geometry.computeBoundingSphere();
-        // 이름표: 모양 바로 아래 (별자리 이름, 그 아래 주제)
+        // 이름표: 모양 바로 아래 주제, 그 아래 작은 별자리 이름
         const sel = c.index === this.index;
         const base = 2.4 * (sel ? 1.12 : 1) * (this.isMobile ? 1.1 : 1);
         const cellW = Math.tan(c.cell.half * 1.35 * DEG) * 2 * DOME_R;
-        const lh = Math.min(base, cellW / c.labelAspect);
-        const l1 = starPoint(c.cell, 0, -1.28 - 0.08 * c.scale, c.scale);
+        const extra = c.labelLines - 1; // 두 줄이면 그만큼 아래로
+        let lh = base * (extra > 0 ? 0.9 * c.labelLines : 1) * (c.slug ? 1 : 0.78); // 주제 없는 안내는 조금 작게
+        if (lh * c.labelAspect > cellW) lh = cellW / c.labelAspect;
+        const y1 = -1.28 - 0.08 * c.scale - 0.2 * extra;
+        const l1 = starPoint(c.cell, 0, y1, c.scale);
         c.label.position.set(l1.x, l1.y, l1.z);
         c.label.scale.set(lh * c.labelAspect, lh, 1);
-        let sh = base * 0.82 * (c.subLines > 1 ? 0.9 * c.subLines : 1);
-        if (sh * c.subAspect > cellW) sh = cellW / c.subAspect;
-        const l2 = starPoint(c.cell, 0, -1.28 - 0.08 * c.scale - 0.3 - 0.14 * c.subLines, c.scale);
+        const sh = Math.min(base * 0.5, cellW / c.subAspect);
+        const l2 = starPoint(c.cell, 0, y1 - 0.34 - 0.2 * extra, c.scale);
         c.sub.position.set(l2.x, l2.y, l2.z);
         c.sub.scale.set(sh * c.subAspect, sh, 1);
         posAttr.needsUpdate = true;
@@ -477,11 +479,12 @@ export class HillScene {
             c.scaleTarget = sel ? this.selScale : 1;
             (c.lines.material as THREE.LineBasicMaterial).opacity = sel ? 0.45 : c.slug ? 0.16 : 0.09;
             const lm = c.label.material as THREE.SpriteMaterial;
-            lm.opacity = sel ? 1 : c.slug ? 0.62 : 0.4;
-            lm.color.set(sel ? 0xffd86b : 0xc9d4ff);
+            lm.opacity = sel ? 1 : c.slug ? 0.62 : 0.38;
+            lm.color.set(sel ? 0xffd86b : c.slug ? 0xffffff : 0xc9d4ff);
+            // 별자리 이름은 늘 보조라 흐리게
             const sm = c.sub.material as THREE.SpriteMaterial;
-            sm.opacity = sel ? 0.95 : c.slug ? 0.55 : 0.3;
-            sm.color.set(sel ? 0xffffff : 0xc9d4ff);
+            sm.opacity = sel ? 0.5 : c.slug ? 0.3 : 0.2;
+            sm.color.set(0xc9d4ff);
         }
         const now = this.clock.getElapsedTime();
         for (let i = 0; i < this.starList.length; i++) this.writeStar(i, (this.starGeo.attributes.aBorn as THREE.BufferAttribute).getX(i), now);

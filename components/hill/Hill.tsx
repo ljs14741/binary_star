@@ -254,7 +254,7 @@ function Hill3D({ initialTotal }: Props) {
         <section className="hill-wrap" aria-label={t("hill_title")}>
             <canvas ref={canvasRef} className="hill-canvas" />
 
-            {/* 위: 별자리(방) 이름 · 넘기기 · 같이 보는 사람 */}
+            {/* 위: 주제(방) 이름 · 넘기기 · 같이 보는 사람. 별자리 이름은 아래 작게 */}
             <div className="pointer-events-none absolute inset-x-0 top-2 flex flex-col items-center gap-1 px-3">
                 <div className="pointer-events-auto flex w-full max-w-[480px] items-center justify-between">
                     <button onClick={() => go(-1)} aria-label={t("hill_prev")} className="glass rounded-full p-2 text-muted active:scale-95" disabled={rooms.length < 2}>
@@ -262,9 +262,9 @@ function Hill3D({ initialTotal }: Props) {
                     </button>
                     <div className="min-w-0 text-center">
                         <AnimatePresence mode="wait">
-                            <motion.h2 key={slot ? index : "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }} className="truncate text-lg font-semibold leading-tight text-ink drop-shadow">
-                                {slot ? `${slot.zodiac.symbol} ${slot.zodiac.names[lang]}` : t("hill_title")}
-                                <span className={`ml-1.5 text-[13px] font-medium ${room ? "text-star-soft" : "text-dim"}`}>{slot ? (room ? room.title : t("hill_empty_zodiac")) : ""}</span>
+                            <motion.h2 key={slot ? index : "none"} initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -4 }} transition={{ duration: 0.25 }} className="flex flex-col items-center leading-tight drop-shadow">
+                                <span className={`truncate text-lg ${room ? "font-semibold text-ink" : "font-medium text-muted"}`}>{slot ? (room ? room.title : t("hill_empty_zodiac")) : t("hill_title")}</span>
+                                {slot && <span className="text-[11px] font-normal text-dim">{slot.zodiac.symbol} {slot.zodiac.names[lang]}</span>}
                             </motion.h2>
                         </AnimatePresence>
                     </div>
@@ -272,16 +272,16 @@ function Hill3D({ initialTotal }: Props) {
                         <ChevronRight size={18} />
                     </button>
                 </div>
-                {/* 황도 12궁 띠: 지금 보는 별자리·주제 있는 별자리 표시 */}
-                <div className="flex items-center gap-0.5">
+                {/* 12칸 띠(점): 지금 보는 자리·주제 있는 자리 표시. 기호 대신 점이라 별자리는 보조로만 */}
+                <div className="flex items-center">
                     {slots.map((s, i) => (
                         <button
                             key={s.zodiac.name}
-                            aria-label={`${s.zodiac.names[lang]}${s.room ? ` · ${s.room.title}` : ""}`}
+                            aria-label={`${s.room ? `${s.room.title} · ` : ""}${s.zodiac.names[lang]}`}
                             onClick={() => sceneRef.current?.goTo(i)}
-                            className={`pointer-events-auto flex h-6 w-6 items-center justify-center rounded-full text-[13px] leading-none transition-all ${i === index ? "scale-110 bg-star/25 text-star" : s.room ? "text-ink/85" : "text-white/30"}`}
+                            className="pointer-events-auto flex h-5 w-5 items-center justify-center"
                         >
-                            {s.zodiac.symbol}
+                            <span className={`block rounded-full transition-all ${i === index ? "h-2.5 w-2.5 bg-star shadow-[0_0_6px_rgba(255,216,107,0.8)]" : s.room ? "h-1.5 w-1.5 bg-ink/80" : "h-1.5 w-1.5 bg-white/25"}`} />
                         </button>
                     ))}
                 </div>
