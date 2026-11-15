@@ -225,7 +225,7 @@ export const en: { [K in keyof typeof ko]: string } = {
     hill_prev: "Previous constellation",
     hill_next: "Next constellation",
     intro_1: "A night hill by the sea,\nwhere strangers' stories hang as stars",
-    intro_2: "Each constellation is a room.\nTap a star to read; if it touches you, tap the heart",
+    intro_2: "Stars gather by topic, like ‘To my first love’\nor ‘To Mom and Dad’.\nTap a star to read; if it touches you, tap the heart",
     intro_3: "Your story can become\na star in this sky too",
     intro_next: "Next",
     intro_start: "Look at the sky",

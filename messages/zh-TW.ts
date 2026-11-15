@@ -225,7 +225,7 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     hill_prev: "上一個星座",
     hill_next: "下一個星座",
     intro_1: "這裡是海邊的夜晚山丘，\n陌生人的故事化作星星掛在天上",
-    intro_2: "一個星座就是一個主題房。\n點星星讀故事，觸動你就按下共感",
+    intro_2: "星星依主題聚在一起，\n像「給初戀」「給爸媽」。\n點星星讀故事，觸動你就按下共感",
     intro_3: "你的故事\n也能成為這片天空的星",
     intro_next: "下一步",
     intro_start: "去看天空",
