@@ -44,7 +44,7 @@ export const ZODIAC: Shape[] = [
 ];
 export const SHAPES = ZODIAC;
 
-// 방 slug → 어울리는 별자리. 모르는 방은 비어 있는 별자리를 순서대로
+// 방 slug → 어울리는 별자리. 모르는 방은 비어 있는 별자리를 순서대로 (지금 빈자리는 6번째 처녀자리 = 첫 사용자 제안 몫)
 const BY_SLUG: Record<string, string> = {
     "to-my-twenties": "aries", // 시작
     "first-love": "pisces", // 사랑의 신화
@@ -55,7 +55,7 @@ const BY_SLUG: Record<string, string> = {
     "to-me-this-year": "leo", // 올해의 주인공
     "to-someone-in-heaven": "scorpius", // 먼저 떠난 사람·아이 (죽음과 다시 태어남)
     "to-a-friend-i-lost-touch-with": "gemini", // 쌍둥이 같던 친구
-    "to-my-child": "virgo", // 돌봄
+    "to-my-child": "taurus", // 든든함 (2번째 자리를 채워 빈 별자리가 6번째 처녀자리로 가게)
     "to-you-beside-me": "sagittarius", // 같이 가는 길
 };
 

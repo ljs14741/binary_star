@@ -102,10 +102,10 @@ export class ChristmasTree {
         this.group.position.set(x, y, z);
         const tt = treeTexture();
         // 몸통 Sprite 는 늘 카메라를 봄. 전구·별도 같은 평면에 있게 그룹을 카메라 쪽으로 돌림(update)
-        const body = new THREE.Sprite(new THREE.SpriteMaterial({ map: tt, transparent: true, depthWrite: false }));
+        // 불투명(alphaTest)으로 그려 깊이를 남김 → 트리 뒤 요정만 가려지고 앞의 요정은 트리 위에 그려짐. 전구는 그 앞에
+        const body = new THREE.Sprite(new THREE.SpriteMaterial({ map: tt, transparent: false, alphaTest: 0.3, depthWrite: true }));
         body.center.set(0.5, 0);
         body.scale.set(W, H, 1);
-        body.renderOrder = 1;
         this.group.add(body);
         const bulbTex = glowTexture("255,214,140");
         for (const [u, v] of BULBS) {
