@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Coffee, MoonStar, Smile, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
@@ -15,6 +15,7 @@ import { api, ensureNickname, getMineIds, langPath, NICK_EVENT, siteOrigin, getN
 import { randomNickname } from "@/lib/nickname";
 import { formatNumber } from "@/lib/format";
 import { HillScene, hasWebGL, type HighlightInfo } from "./HillScene";
+import Tour from "./Tour";
 import { assignRooms, ZODIAC } from "./constellations";
 import { setSoundPref, Sound, soundPref } from "@/lib/sound";
 import { useHillSocket } from "./useHillSocket";
@@ -26,8 +27,8 @@ import { SISTER_SITES, siteName, sisterUrl } from "@/lib/site";
 
 type Props = { initialTotal: number };
 
-const INTRO_KEY = "star_intro_seen";
-const INTRO_N = 5; // 처음 안내 장 수 (messages 의 intro_1~5)
+// 2: 글만 5장이던 안내를 버튼 가리키는 안내로 바꿈 → 예전 안내 본 사람도 한 번 더
+const INTRO_KEY = "star_intro_seen2";
 const DRAG_KEY = "star_drag_seen"; // 하늘 돌리기 힌트를 봤는지
 const EMOTE_LABEL: Partial<Record<Gesture, string>> = { wave: "👋", heart: "💛", pat: "🤗", tear: "🥲", joy: "😊", lookup: "✨" };
 const DONATE_URL = "https://qr.kakaopay.com/Ej9JnRsvn"; // game 과 같은 카카오페이 송금 링크
@@ -144,7 +145,7 @@ function Hill3D({ initialTotal }: Props) {
     const [story, setStory] = useState<StoryView | null>(null);
     const [storyOpen, setStoryOpen] = useState(false);
     const [dailyStory, setDailyStory] = useState<{ story: StoryView; final: boolean } | null>(null);
-    // 처음 온 사람에겐 안내 3장 (브라우저가 기억)
+    // 처음 온 사람에겐 환영 한 장 + 버튼 안내 (브라우저가 기억)
     const needsIntro = useSyncExternalStore(
         () => () => {},
         () => {
@@ -175,14 +176,15 @@ function Hill3D({ initialTotal }: Props) {
             localStorage.setItem(DRAG_KEY, "1");
         } catch {}
     }, []);
-    const [introStep, setIntroStep] = useState(0);
     const [introDone, setIntroDoneRaw] = useState(false);
     const setIntroDone = (v: boolean) => {
         setIntroDoneRaw(v);
         if (v) setTimeout(() => setIntroDoneRaw(false), 6000);
     };
-    const intro: number | null = needsIntro && !introDone ? introStep : null;
-    const dragHint = needsDragHint && !dragDone && intro === null;
+    // 첫 장(환영) 뒤에 실제 버튼을 가리키는 안내. ? 창에서 다시 볼 수 있음
+    const [tourOn, setTourOn] = useState(false);
+    const intro: number | null = needsIntro && !introDone && !tourOn ? 0 : null;
+    const dragHint = needsDragHint && !dragDone && intro === null && !tourOn;
     useEffect(() => {
         if (!dragHint) return;
         const tm = setTimeout(markDrag, 14000);
@@ -244,11 +246,24 @@ function Hill3D({ initialTotal }: Props) {
         void openStory(next).then(() => storyScrollRef.current?.scrollTo({ top: 0 }));
     };
 
+    const startTour = () => {
+        window.scrollTo({ top: 0 });
+        setTourOn(true);
+    };
+    const tourSteps = useMemo(
+        () => (["nick", "topic", "emote", "wish", "write"] as const).map((k) => ({ target: k, text: t(`tour_${k}`) })),
+        [t],
+    );
+
     const closeIntro = () => {
         setIntroDone(true);
         try {
             localStorage.setItem(INTRO_KEY, "1");
         } catch {}
+    };
+    const endTour = () => {
+        setTourOn(false);
+        closeIntro();
     };
 
     // 장면 + 소켓 다리
@@ -431,7 +446,7 @@ function Hill3D({ initialTotal }: Props) {
                         <ChevronLeft size={18} />
                     </button>
                     {/* 제목을 누르면 주제 판: 12칸을 한눈에 보고 바로 넘어감 */}
-                    <button onClick={() => setTopicOpen(true)} aria-label={t("topics_title")} className="flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-center active:scale-[0.98]">
+                    <button data-tour="topic" onClick={() => setTopicOpen(true)} aria-label={t("topics_title")} className="flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-center active:scale-[0.98]">
                         <AnimatePresence mode="wait">
                             <motion.h2
                                 key={sky && slot ? index : "none"}
@@ -491,6 +506,7 @@ function Hill3D({ initialTotal }: Props) {
                 <div className="relative">
                     <button
                         onClick={() => setEmoteOpen((v) => !v)}
+                        data-tour="emote"
                         aria-label={t("emote_title")}
                         title={t("emote_title")}
                         aria-expanded={emoteOpen}
@@ -527,6 +543,7 @@ function Hill3D({ initialTotal }: Props) {
                 </div>
                 {/* 소원 부두: 누르면 내 요정이 부두로 걸어가 달을 보고 소원 창이 열림 */}
                 <button
+                    data-tour="wish"
                     onClick={() => (sceneRef.current ? sceneRef.current.goWish() : setWishOpen(true))}
                     aria-label={t("wish_button")}
                     title={t("wish_button")}
@@ -663,9 +680,20 @@ function Hill3D({ initialTotal }: Props) {
                         </li>
                     ))}
                 </ul>
-                <button onClick={() => setHelpOpen(false)} className="btn-star mt-5 h-11 w-full rounded-full text-sm font-semibold">
-                    {t("help_ok")}
-                </button>
+                <div className="mt-5 flex gap-2">
+                    <button
+                        onClick={() => {
+                            setHelpOpen(false);
+                            startTour();
+                        }}
+                        className="glass h-11 flex-1 rounded-full text-sm text-ink"
+                    >
+                        {t("help_tour")}
+                    </button>
+                    <button onClick={() => setHelpOpen(false)} className="btn-star h-11 flex-1 rounded-full text-sm font-semibold">
+                        {t("help_ok")}
+                    </button>
+                </div>
                 {/* binaryworld 의 다른 놀거리 */}
                 <p className="mt-5 text-[12px] text-dim">{t("help_more")}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -736,6 +764,7 @@ function Hill3D({ initialTotal }: Props) {
             {/* 아래: 나도 한마디 */}
             <div className="pointer-events-none absolute inset-x-0 bottom-0 flex flex-col items-center gap-1.5 px-4 pb-2.5 landscape:gap-2 landscape:pb-4">
                 <Link
+                    data-tour="write"
                     href={langPath(lang, room ? `/room/${room.slug}/write` : rooms[0] ? `/room/${rooms[0].slug}/write` : "")}
                     className="btn-star pointer-events-auto flex items-center gap-1.5 rounded-full px-5 py-2.5 text-[14px] font-semibold"
                 >
@@ -754,6 +783,14 @@ function Hill3D({ initialTotal }: Props) {
                 )}
             </AnimatePresence>
 
+            {tourOn && (
+                <Tour
+                    steps={tourSteps}
+                    labels={{ next: t("intro_next"), done: t("intro_start"), skip: t("intro_skip") }}
+                    onDone={endTour}
+                />
+            )}
+
             {/* 처음 온 사람 안내 */}
             <AnimatePresence>
                 {intro !== null && (
@@ -762,25 +799,20 @@ function Hill3D({ initialTotal }: Props) {
                             <Sparkles size={28} className="mx-auto mb-4 text-star" />
                             <p className="whitespace-pre-line break-keep text-lg font-semibold leading-relaxed text-ink">{t(`intro_${intro + 1}` as "intro_1")}</p>
                             <div className="mt-6 flex items-center justify-center gap-1.5">
-                                {Array.from({ length: INTRO_N }, (_, i) => (
-                                    <span key={i} className={`h-1.5 rounded-full ${i === intro ? "w-5 bg-star" : "w-1.5 bg-white/35"}`} />
-                                ))}
+
                             </div>
                             <button
                                 onClick={() => {
                                     armSound();
-                                    if (intro < INTRO_N - 1) setIntroStep(intro + 1);
-                                    else closeIntro();
+                                    startTour();
                                 }}
                                 className="btn-star mt-6 rounded-full px-6 py-2.5 text-sm font-semibold"
                             >
-                                {intro < INTRO_N - 1 ? t("intro_next") : t("intro_start")}
+                                {t("intro_next")}
                             </button>
-                            {intro < INTRO_N - 1 && (
-                                <button onClick={closeIntro} className="mt-3 block w-full text-xs text-dim">
-                                    {t("intro_skip")}
-                                </button>
-                            )}
+                            <button onClick={closeIntro} className="mt-3 block w-full text-xs text-dim">
+                                {t("intro_skip")}
+                            </button>
                         </motion.div>
                     </motion.div>
                 )}
