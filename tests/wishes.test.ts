@@ -1,6 +1,6 @@
 import { afterAll, describe, expect, it } from "vitest";
 import { prisma } from "@/lib/prisma";
-import { adminWishAction, cheerWish, createWish, listSky, reportWish, WISH_PER_DAY } from "@/lib/wishes";
+import { adminWishAction, cheerWish, createWish, listSky, reportWish, WISH_PER_DAY, WISH_SKY_HOURS, WISH_SKY_MIN } from "@/lib/wishes";
 
 const vk = (n: string) => `test-wish-${n}-`.padEnd(64, "x");
 const ip = (n: string) => `test-wish-ip-${n}`;
@@ -45,17 +45,23 @@ describe("소원 부두", () => {
         expect((await listSky()).items.some((w) => w.id === r.wish.id)).toBe(false);
     });
 
-    it("풍등은 하루 지나면 내려가고, 고정한 것은 남음", async () => {
+    it("풍등은 하루 지나면 채움 자리로만 남고(하늘이 비었을 때 뒤쪽), 고정한 것은 맨 앞", async () => {
         const r = await createWish({ body: "오래 남는 소원", lang: "ko", voterKey: vk("f"), ipHash: ip("f") });
         if (!r.ok) throw new Error("create failed");
         await prisma.wish.update({ where: { id: r.wish.id }, data: { created_at: new Date(Date.now() - 26 * 3600_000) } });
         const { memoClear } = await import("@/lib/cache");
         memoClear("wishes:");
-        expect((await listSky()).items.some((w) => w.id === r.wish.id)).toBe(false);
+        // 하루 안 소원·고정 소원보다 앞에 오지 않음 (하늘이 WISH_SKY_MIN 개보다 적을 때만 채움으로 뒤에)
+        const since = Date.now() - WISH_SKY_HOURS * 3600_000;
+        const alive = await prisma.wish.count({ where: { status: "public", OR: [{ pinned: true }, { created_at: { gte: new Date(since) } }] } });
+        const sky0 = await listSky();
+        const at0 = sky0.items.findIndex((w) => w.id === r.wish.id);
+        if (alive >= WISH_SKY_MIN) expect(at0).toBe(-1);
+        else expect(at0 === -1 || at0 >= alive).toBe(true);
         expect(await adminWishAction(r.wish.id, "pin")).toBe(true);
         const list = await listSky();
         expect(list.items[0]?.id).toBe(r.wish.id); // 고정은 맨 앞
         expect(await adminWishAction(r.wish.id, "unpin")).toBe(true);
-        expect((await listSky()).items.some((w) => w.id === r.wish.id)).toBe(false);
+        expect((await listSky()).items[0]?.id).not.toBe(r.wish.id);
     });
 });

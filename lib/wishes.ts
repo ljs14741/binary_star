@@ -10,6 +10,7 @@ export const WISH_PER_DAY = 3; // 한 사람(쿠키+IP)이 하루에 빌 수 있
 export const WISH_PER_IP_DAY = 12; // 같은 IP 대역 하루 (쿠키를 지워도)
 export const WISH_HIDE_REPORTS = 3; // 서로 다른 IP 대역 신고 수
 export const WISH_SKY_HOURS = 24; // 풍등이 하늘에 떠 있는 시간
+export const WISH_SKY_MIN = 10; // 하늘에 이보다 적으면 지난 소원으로 채움
 
 export type WishView = { id: number; body: string; cheers: number; cheered: boolean; mine: boolean };
 
@@ -28,15 +29,19 @@ export async function createWish(input: { body: string; lang: Lang; voterKey: st
 }
 
 // 지금 하늘의 소원: 최근 하루 안에 빈 것 + 고정된 것 (고정 먼저, 최근 것부터 100개) + 그 수
+// 하늘이 비어 보이지 않게 WISH_SKY_MIN 개보다 적으면 하루 지난 소원도 최근 것부터 채움 (사람 적을 때용)
 export async function listSky(voterKey?: string): Promise<{ count: number; items: WishView[] }> {
     const base = await memo("wishes:sky", 15_000, async () => {
         const since = new Date(Date.now() - WISH_SKY_HOURS * 3600_000);
         const alive = { OR: [{ pinned: true }, { created_at: { gte: since } }] };
+        const sel = { id: true, body: true, cheer_count: true, voter_key: true } as const;
         const [count, rows] = await Promise.all([
             prisma.wish.count({ where: { ...alive, status: { in: ["public", "private"] } } }),
-            prisma.wish.findMany({ where: { ...alive, status: "public" }, orderBy: [{ pinned: "desc" }, { id: "desc" }], take: 100, select: { id: true, body: true, cheer_count: true, voter_key: true } }),
+            prisma.wish.findMany({ where: { ...alive, status: "public" }, orderBy: [{ pinned: "desc" }, { id: "desc" }], take: 100, select: sel }),
         ]);
-        return { count, rows };
+        if (rows.length >= WISH_SKY_MIN) return { count, rows };
+        const fill = await prisma.wish.findMany({ where: { status: "public", id: { notIn: rows.map((r) => r.id) } }, orderBy: { id: "desc" }, take: WISH_SKY_MIN - rows.length, select: sel });
+        return { count: count + fill.length, rows: [...rows, ...fill] };
     });
     const ids = base.rows.map((r) => r.id);
     const cheered = voterKey && ids.length ? new Set((await prisma.wish_cheer.findMany({ where: { wish_id: { in: ids }, voter_key: voterKey }, select: { wish_id: true } })).map((c) => c.wish_id)) : new Set<number>();
