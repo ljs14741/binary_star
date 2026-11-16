@@ -5,6 +5,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from "http";
 import next from "next";
 import { WebSocketServer, type WebSocket } from "ws";
 import { Hub, type Member } from "./lib/realtime/hub";
+import { HILL_CAP } from "./lib/realtime/protocol";
 import { lookupGeo } from "./lib/geo";
 import { cookieValue, ipFromHeaders, makeVoterKey, VISITOR_COOKIE } from "./lib/voter-core";
 import { newVisitorId } from "./lib/crypto";
@@ -62,7 +63,7 @@ async function handleInternal(req: IncomingMessage, res: ServerResponse, path: s
         if (typeof body.storyId === "number") hub.emitDaily(body.storyId, !!body.final);
     } else if (path === "/_rt/stats") {
         res.setHeader("content-type", "application/json");
-        res.end(JSON.stringify({ total: hub.total(), countries: hub.countries(), hills: hub.hillNames() }));
+        res.end(JSON.stringify({ total: hub.total(), countries: hub.countries(), hills: hub.hillNames(), peak: hub.peakToday(), cap: HILL_CAP }));
         return true;
     }
     res.statusCode = 204;

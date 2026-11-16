@@ -6,6 +6,7 @@ import AdminActions from "./AdminActions";
 import TopicSwap from "./TopicSwap";
 import AdminDonations from "./AdminDonations";
 import AdminWishes from "./AdminWishes";
+import AdminLive from "./AdminLive";
 import AdminLogin from "./AdminLogin";
 import AdminRemember from "./AdminRemember";
 
@@ -65,7 +66,7 @@ export default async function AdminPage({ params, searchParams }: P) {
             <p className="mt-0.5 text-[11px] text-dim">{formatDate(new Date(), "ko", { dateStyle: "medium", timeStyle: "short" })} 기준 · 새로고침하면 갱신</p>
 
             <div className="mt-4 grid grid-cols-2 gap-2">
-                <Stat label="지금 언덕에" v={`${st.online}명`} />
+                <Stat label="열린 주제" v={`${st.rooms.length}개`} sub={`${TOPIC_SLOTS}칸 중 · 실시간 인원은 아래`} />
                 <Stat label="오늘 방문자" v={st.visitors.today} sub={`7일 ${st.visitors.week} · 전체 ${st.visitors.total}`} />
                 <Stat label="오늘 올라온 글" v={st.stories.today} sub={`7일 ${st.stories.week} · 공개 전체 ${st.stories.total}`} />
                 <Stat label="오늘 공감" v={st.empathies.today} sub={`7일 ${st.empathies.week} · 전체 ${st.empathies.total}`} />
@@ -73,6 +74,9 @@ export default async function AdminPage({ params, searchParams }: P) {
             {(st.stories.pending > 0 || st.stories.privateN > 0 || st.stories.hidden > 0) && (
                 <p className="mt-2 text-[11px] text-muted">공개 아닌 글: 대기 {st.stories.pending} · 본인만 {st.stories.privateN} · 숨김 {st.stories.hidden}</p>
             )}
+
+            <h2 className="mt-6 text-sm font-semibold text-ink">실시간 언덕</h2>
+            <AdminLive adminKey={adminKey} />
 
             <h2 className="mt-6 text-sm font-semibold text-ink">최근 14일 방문자</h2>
             <div className="mt-2 flex h-24 items-end gap-1">

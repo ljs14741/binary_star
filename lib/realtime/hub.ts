@@ -52,6 +52,8 @@ const NAME_MIN_INTERVAL = 1000; // 별명 바꾸기 최소 간격(ms)
 export class Hub {
     private hills: Hill[] = [];
     private byVoter = new Map<string, Member>();
+    // 오늘(KST) 최고 동시 접속 (관리자 화면용, 서버 재시작하면 처음부터)
+    private peak = { day: "", n: 0, at: 0 };
     private nextId = 1;
     private timer: ReturnType<typeof setInterval> | null = null;
     private countTimer: ReturnType<typeof setInterval> | null = null;
@@ -81,6 +83,7 @@ export class Hub {
             hill.members.set(m.id, m);
             hill.joined.push(pub(m));
             this.byVoter.set(voterKey, m);
+            this.notePeak();
         }
         m.sockets.add(socket);
         const members = [...m.hill.members.values()].filter((o) => o.id !== m!.id).map(pub);
@@ -198,6 +201,19 @@ export class Hub {
 
     hillNames(): { name: string; count: number }[] {
         return this.hills.map((h) => ({ name: h.name, count: h.members.size }));
+    }
+
+    peakToday(): { n: number; at: number } {
+        this.notePeak();
+        return { n: this.peak.n, at: this.peak.at };
+    }
+
+    private notePeak() {
+        const now = Date.now();
+        const day = new Date(now + 9 * 3600 * 1000).toISOString().slice(0, 10);
+        const n = this.total();
+        if (this.peak.day !== day) this.peak = { day, n, at: now };
+        else if (n > this.peak.n) this.peak = { day, n, at: now };
     }
 
     // ---- 내부 ----

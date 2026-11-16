@@ -73,14 +73,31 @@ export async function getFeaturedDue(lang: Lang, windowMs = 120_000): Promise<{ 
     return { due: new Date(until).toISOString(), story };
 }
 
+export type Presence = { total: number; countries: Record<string, number> };
+export type LivePresence = Presence & { hills: { name: string; count: number }[]; peak: { n: number; at: number }; cap: number };
+
+async function rtStats(): Promise<Partial<LivePresence>> {
+    const base = process.env.RT_EMIT_URL || `http://127.0.0.1:${process.env.PORT || 3100}`;
+    const r = await fetch(`${base}/_rt/stats`, { method: "POST", headers: { "x-rt-secret": process.env.STAR_SECRET || "star-dev-secret" }, signal: AbortSignal.timeout(800), cache: "no-store" });
+    return (await r.json()) as Partial<LivePresence>;
+}
+
 // 실시간 허브 현황 (SSR·2D 대체 화면용). 허브 없으면 0
-export async function getPresence(): Promise<{ total: number; countries: Record<string, number> }> {
+export async function getPresence(): Promise<Presence> {
     try {
-        const base = process.env.RT_EMIT_URL || `http://127.0.0.1:${process.env.PORT || 3100}`;
-        const r = await fetch(`${base}/_rt/stats`, { method: "POST", headers: { "x-rt-secret": process.env.STAR_SECRET || "star-dev-secret" }, signal: AbortSignal.timeout(800), cache: "no-store" });
-        const j = (await r.json()) as { total: number; countries: Record<string, number> };
+        const j = await rtStats();
         return { total: j.total || 0, countries: j.countries || {} };
     } catch {
         return { total: 0, countries: {} };
+    }
+}
+
+// 관리자용: 언덕별 인원·오늘 최고 동시 접속까지
+export async function getLivePresence(): Promise<LivePresence | null> {
+    try {
+        const j = await rtStats();
+        return { total: j.total || 0, countries: j.countries || {}, hills: j.hills || [], peak: j.peak || { n: 0, at: 0 }, cap: j.cap || 60 };
+    } catch {
+        return null;
     }
 }
