@@ -222,6 +222,61 @@ export function glowTexture(color = "255,216,107"): THREE.Texture {
     return makeTexture(c);
 }
 
+// 실제 위상의 달. phase 0 = 삭, 0.5 = 보름 (북반구 기준: 차오를 땐 오른쪽이 밝음)
+// 어두운 부분도 지구빛으로 희미하게 그려서 그믐에도 "달에게 소원" 자리가 사라지지 않게 함
+export function moonTexture(phase: number): THREE.Texture {
+    const S = 128,
+        cx = 64,
+        cy = 64,
+        r = 40;
+    const c = canvas(S, S);
+    const g = c.getContext("2d")!;
+    // 둘레 은은한 빛
+    const halo = g.createRadialGradient(cx, cy, r * 0.9, cx, cy, 64);
+    halo.addColorStop(0, "rgba(255,244,214,0.22)");
+    halo.addColorStop(1, "rgba(255,244,214,0)");
+    g.fillStyle = halo;
+    g.fillRect(0, 0, S, S);
+    // 지구빛 (어두운 쪽)
+    g.fillStyle = "rgba(150,160,200,0.28)";
+    g.beginPath();
+    g.arc(cx, cy, r, 0, Math.PI * 2);
+    g.fill();
+    // 밝은 쪽: 바깥 반원 + 명암 경계(타원 반쪽)
+    const k = Math.cos(phase * Math.PI * 2); // 1 = 삭, -1 = 보름
+    const lit = g.createRadialGradient(cx - r * 0.25, cy - r * 0.25, r * 0.1, cx, cy, r);
+    lit.addColorStop(0, "rgba(255,250,232,1)");
+    lit.addColorStop(1, "rgba(246,232,196,1)");
+    g.save();
+    if (phase > 0.5) {
+        // 기울 땐 왼쪽이 밝음
+        g.translate(S, 0);
+        g.scale(-1, 1);
+    }
+    g.fillStyle = lit;
+    g.beginPath();
+    g.arc(cx, cy, r, -Math.PI / 2, Math.PI / 2, false);
+    // k>0 초승: 경계가 오른쪽으로 불룩 / k<0 상현 넘김: 왼쪽으로 불룩
+    g.ellipse(cx, cy, Math.max(0.01, Math.abs(k) * r), r, 0, Math.PI / 2, -Math.PI / 2, k > 0);
+    g.fill();
+    g.restore();
+    // 바다(어두운 무늬) 몇 개. 밝은 쪽에만 보이게 위에 겹침
+    g.globalCompositeOperation = "source-atop";
+    g.fillStyle = "rgba(150,140,120,0.16)";
+    for (const [x, y, rr] of [
+        [-10, -12, 9],
+        [8, -4, 7],
+        [-4, 10, 8],
+        [14, 14, 5],
+    ] as const) {
+        g.beginPath();
+        g.arc(cx + x, cy + y, rr, 0, Math.PI * 2);
+        g.fill();
+    }
+    g.globalCompositeOperation = "source-over";
+    return makeTexture(c);
+}
+
 // 글자 스프라이트 (별자리 이름 등). "\n" 으로 여러 줄
 export function textTexture(text: string, opts: { size?: number; color?: string; font?: string; pad?: number } = {}): { tex: THREE.Texture; aspect: number } {
     const size = opts.size ?? 48;

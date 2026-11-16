@@ -9,9 +9,10 @@ import type { Lang } from "@/lib/i18n/config";
 import type { Gesture, MemberPublic, Pose, StarEvent } from "@/lib/realtime/protocol";
 import { FIRE_KEEP_OUT, FIRE_POS, HILL_HALF_D, HILL_HALF_W, onDock, WISH_DOCK } from "@/lib/realtime/protocol";
 import type { Sfx } from "@/lib/sound";
-import { CREATURE_KINDS, creatureTexture, glowTexture, heartTexture, lanternTexture, ME_PALETTE, PALETTES, textTexture, wrapTitle, type CreatureKind, type Palette } from "./sprites";
+import { CREATURE_KINDS, creatureTexture, glowTexture, heartTexture, lanternTexture, moonTexture, ME_PALETTE, PALETTES, textTexture, wrapTitle, type CreatureKind, type Palette } from "./sprites";
 import { assignRooms, ZODIAC, type Shape } from "./constellations";
 import { Scenery } from "./scenery";
+import { isSnowSeason, moonIllumination, moonPhase } from "./season";
 import { azDelta, type Cell, DOME_R, fromAngles, hfovOf, ringLayout, SKY_ORIGIN, SKY_V_CENTER, starAlpha, starPoint, starSize } from "./sky";
 
 export type HighlightInfo = { star: SkyStar; roomIndex: number } | null;
@@ -50,6 +51,32 @@ const IDLE_BEFORE_AUTO = 20; // 마지막 조작 뒤 이만큼 지나야 다음 
 const WAVE_SEC = 2.2;
 const EMOTE_ICON: Record<Gesture, string> = { wave: "👋", heart: "💛", pat: "🤗", tear: "🥲", joy: "😊", lookup: "✨", hug: "🤗" };
 const GIFT_SEC = 0.9;
+// 눈: 카메라 둘레 상자 안에서 떨어지고 바닥에 닿으면 위로 되돌아감 (CPU 계산 없이 셰이더로)
+const SNOW_BOX = 16,
+    SNOW_H = 13;
+const SNOW_VERT = `
+attribute float aSeed; uniform float uTime; uniform float uPixelRatio;
+varying float vA;
+void main(){
+    vec3 p = position;
+    float speed = 0.55 + aSeed * 0.5;
+    p.y = mod(p.y - uTime * speed, ${SNOW_H.toFixed(1)}) - 1.5;
+    p.x += sin(uTime * (0.4 + aSeed * 0.5) + aSeed * 30.0) * 0.35;
+    p.z += cos(uTime * (0.3 + aSeed * 0.4) + aSeed * 17.0) * 0.25;
+    vec4 mv = modelViewMatrix * vec4(p, 1.0);
+    gl_Position = projectionMatrix * mv;
+    // 카메라 바로 앞 눈송이가 크게 번지지 않게 상한
+    gl_PointSize = min((2.2 + aSeed * 2.6) * (9.0 / max(1.0, -mv.z)), 7.0) * uPixelRatio;
+    vA = 0.55 + 0.45 * aSeed;
+}`;
+const SNOW_FRAG = `
+varying float vA;
+void main(){
+    vec2 c = gl_PointCoord - 0.5;
+    float a = smoothstep(0.5, 0.1, length(c)) * vA;
+    gl_FragColor = vec4(0.93, 0.95, 1.0, a);
+}`;
+
 const MOON_AZ = -15,
     MOON_ELEV = 33; // 달 방위·고도(도). 바다 달빛 길(scenery)도 같은 방위
 const PORTRAIT_CAM_FWD = 3.2; // 세로 화면에서 카메라가 섬 쪽으로 다가가는 거리
@@ -171,6 +198,8 @@ export class HillScene {
     private camera: THREE.PerspectiveCamera;
     private ground: THREE.Mesh;
     private scenery: Scenery;
+    private winter = isSnowSeason();
+    private snow: THREE.Points | null = null;
     private people = new Map<number, Person>();
     // 하늘(돔·별·별자리·달·오로라·유성)은 아주 멀리 있는 것처럼 카메라를 따라다님. 땅·사람·모닥불은 제자리
     private sky = new THREE.Group();
@@ -273,15 +302,25 @@ export class HillScene {
         this.scene.add(this.makeDock());
 
         // 달: 정면 왼쪽 별자리 칸 사이(az -15), 별자리 띠 높이(고도 33). 작게 해서 이름표·문장 카드·칸과 안 겹치고, 폰 왼쪽 가장자리 안에 들어옴
-        const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,236,196"), transparent: true, opacity: 0.42, depthWrite: false, blending: THREE.AdditiveBlending }));
+        // 실제 오늘 달 모양. 가늘수록 둘레 빛·바다 달빛 길도 옅게
+        const phase = moonPhase();
+        const illum = moonIllumination(phase);
+        const moonGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,236,196"), transparent: true, opacity: 0.14 + 0.28 * illum, depthWrite: false, blending: THREE.AdditiveBlending }));
         const moonAt = fromAngles(MOON_AZ, MOON_ELEV, DOME_R * 1.1);
         moonGlow.position.set(moonAt.x, moonAt.y, moonAt.z);
         moonGlow.scale.set(11, 11, 1);
         this.sky.add(moonGlow);
-        const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,244,214"), transparent: true, opacity: 1, depthWrite: false }));
+        const moon = new THREE.Sprite(new THREE.SpriteMaterial({ map: moonTexture(phase), transparent: true, opacity: 1, depthWrite: false }));
         moon.position.copy(moonGlow.position);
         moon.scale.set(4.2, 4.2, 1);
         this.sky.add(moon);
+        this.scenery.setMoonLight(illum);
+
+        // 겨울(12~2월)엔 눈. 움직임 줄이기를 켠 사람에겐 안 내림
+        if (this.winter && !opts.reduceMotion) {
+            this.snow = this.makeSnow(isMobile ? 380 : 750);
+            this.scene.add(this.snow);
+        }
 
         const bg = this.makeBackgroundStars(isMobile ? 600 : 900);
         this.bgMat = bg.material as THREE.ShaderMaterial;
@@ -325,6 +364,30 @@ export class HillScene {
     }
 
     // ---------- 만들기 ----------
+    private makeSnow(n: number): THREE.Points {
+        const pos = new Float32Array(n * 3),
+            seed = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+            pos[i * 3] = (Math.random() * 2 - 1) * SNOW_BOX;
+            pos[i * 3 + 1] = Math.random() * SNOW_H;
+            pos[i * 3 + 2] = (Math.random() * 2 - 1) * SNOW_BOX;
+            seed[i] = Math.random();
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute("aSeed", new THREE.BufferAttribute(seed, 1));
+        const mat = new THREE.ShaderMaterial({
+            vertexShader: SNOW_VERT,
+            fragmentShader: SNOW_FRAG,
+            uniforms: { uTime: { value: 0 }, uPixelRatio: { value: this.renderer.getPixelRatio() } },
+            transparent: true,
+            depthWrite: false,
+        });
+        const pts = new THREE.Points(geo, mat);
+        pts.frustumCulled = false;
+        return pts;
+    }
+
     private makeGround(): THREE.Mesh {
         // 바다 위 섬: 가운데 언덕, 가장자리는 물로 내려가는 비탈
         const W = 60,
@@ -338,7 +401,8 @@ export class HillScene {
         const top = new THREE.Color("#161f4c"),
             bottom = new THREE.Color("#070b1f"),
             edge = new THREE.Color("#04061a"),
-            warm = new THREE.Color("#4a2a1c");
+            warm = new THREE.Color("#4a2a1c"),
+            snowTint = new THREE.Color("#5d6896");
         for (let i = 0; i < pos.count; i++) {
             const x = pos.getX(i),
                 z = pos.getZ(i);
@@ -354,6 +418,8 @@ export class HillScene {
                 .lerp(edge, far * far);
             // 모닥불 둘레는 살짝 따뜻하게
             const df = Math.hypot(x - FIRE_POS.x, z - FIRE_POS.z);
+            // 겨울: 언덕 높은 곳일수록 눈이 덮임. 모닥불 둘레는 녹아서 맨땅
+            if (this.winter) c.lerp(snowTint, t * (1 - far) * 0.55 * THREE.MathUtils.smoothstep(df, 2.2, 4.8));
             c.lerp(warm, Math.max(0, 1 - df / 4.2) * 0.6);
             colors[i * 3] = c.r;
             colors[i * 3 + 1] = c.g;
@@ -1771,6 +1837,10 @@ export class HillScene {
 
         this.scenery.update(now, dt, this.view);
         this.exportHorizon();
+        if (this.snow) {
+            this.snow.position.set(cx, 0, cz);
+            (this.snow.material as THREE.ShaderMaterial).uniforms.uTime.value = now;
+        }
 
         // 고른 별자리가 커지고 나머지는 작아지는 움직임
         for (const c of this.constellations) {
@@ -1823,6 +1893,10 @@ export class HillScene {
                 mat.map = tex;
                 mat.needsUpdate = true;
             }
+            // 모닥불 가까울수록 따뜻하게 일렁이고, 멀면 달빛처럼 푸르스름
+            const fireNear = THREE.MathUtils.clamp(1 - (Math.hypot(p.pos.x - FIRE_POS.x, p.pos.y - FIRE_POS.z) - 1.4) / 5.5, 0, 1);
+            const fl = 0.93 + (this.scenery.fireFlicker - 0.92) * 0.9;
+            mat.color.setRGB(THREE.MathUtils.lerp(0.78, fl, fireNear), THREE.MathUtils.lerp(0.82, fl * 0.9, fireNear), THREE.MathUtils.lerp(0.98, fl * 0.8, fireNear));
             this.place(p);
             const breathe = this.opts.reduceMotion ? 0 : Math.sin(now * 1.6 + p.bob) * 0.02;
             let hop = walking ? Math.abs(Math.sin(p.bob)) * 0.16 : 0;

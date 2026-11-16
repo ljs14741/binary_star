@@ -33,7 +33,7 @@ varying vec3 vWorld;
 void main(){ vec4 w = modelMatrix * vec4(position, 1.0); vWorld = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`;
 // 바다: 아주 어두운 남색 + 달빛 길(달 방향으로 길게) + 등대 쪽 반짝임 + 해안으로 밀려오는 잔물결
 const SEA_FRAG = `
-varying vec3 vWorld; uniform float uTime; uniform vec3 uCam; uniform vec2 uMoonDir; uniform vec3 uLamp; uniform float uLampOn; uniform float uStill;
+varying vec3 vWorld; uniform float uTime; uniform vec3 uCam; uniform vec2 uMoonDir; uniform vec3 uLamp; uniform float uLampOn; uniform float uStill; uniform float uMoonLit;
 float hash(vec2 p){ return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 void main(){
     vec2 d = vWorld.xz - uCam.xz;
@@ -50,7 +50,7 @@ void main(){
     float path = exp(-perp * perp * 90.0) * smoothstep(0.2, 1.0, along);
     float sparkle = hash(floor(vWorld.xz * 1.7 + vec2(0.0, floor(t * 3.0)))) * hash(floor(vWorld.xz * 0.6));
     float glint = step(0.72, sparkle) * (0.5 + 0.5 * sin(t * 6.0 + vWorld.x * 3.0));
-    base += vec3(0.95, 0.88, 0.70) * path * (0.08 + 0.22 * glint) * smoothstep(120.0, 20.0, dist);
+    base += vec3(0.95, 0.88, 0.70) * path * (0.08 + 0.22 * glint) * smoothstep(120.0, 20.0, dist) * uMoonLit;
     // 등대 비침 (등대 바로 아래로 길게)
     vec2 ld = vWorld.xz - uLamp.xz;
     float lamp = exp(-ld.x * ld.x * 0.12) * smoothstep(0.0, 18.0, ld.y) * smoothstep(40.0, 8.0, ld.y);
@@ -162,6 +162,7 @@ export class Scenery {
     private dolphinTex: THREE.Texture;
     private dolphins: { s: THREE.Sprite; splash: THREE.Sprite; born: number; life: number; x: number; z: number; dir: number }[] = [];
     private nextDolphin = 0;
+    fireFlicker = 1; // 모닥불 일렁임 (요정에 비치는 불빛용)
     lampOn = 0; // 0~1, 등대 불빛이 카메라 쪽을 향한 정도 (소리·연출용)
     readonly firePos: THREE.Vector3;
 
@@ -181,7 +182,7 @@ export class Scenery {
         this.seaMat = new THREE.ShaderMaterial({
             vertexShader: SEA_VERT,
             fragmentShader: SEA_FRAG,
-            uniforms: { uTime: { value: 0 }, uCam: { value: new THREE.Vector3(SKY_ORIGIN.x, SKY_ORIGIN.y, SKY_ORIGIN.z) }, uMoonDir: { value: moonDir }, uLamp: { value: lampPos }, uLampOn: { value: 0 }, uStill: { value: opts.reduceMotion ? 1 : 0 } },
+            uniforms: { uTime: { value: 0 }, uCam: { value: new THREE.Vector3(SKY_ORIGIN.x, SKY_ORIGIN.y, SKY_ORIGIN.z) }, uMoonDir: { value: moonDir }, uLamp: { value: lampPos }, uLampOn: { value: 0 }, uStill: { value: opts.reduceMotion ? 1 : 0 }, uMoonLit: { value: 1 } },
         });
         const sea = new THREE.Mesh(new THREE.PlaneGeometry(420, 420, 1, 1), this.seaMat);
         sea.rotation.x = -Math.PI / 2;
@@ -281,6 +282,11 @@ export class Scenery {
         this.smokeTex = glowTexture("150,150,170");
         this.dolphinTex = dolphinTexture();
         this.nextDolphin = 14 + Math.random() * 10;
+    }
+
+    // 달이 가늘수록 바다 달빛 길도 옅게 (그믐에도 아주 조금은 남김)
+    setMoonLight(illum: number) {
+        this.seaMat.uniforms.uMoonLit.value = 0.15 + 0.85 * illum;
     }
 
     // 돌고래 한 무리가 바다에서 뛰어올랐다 들어감 (정면 바다 어딘가, 25~45초마다)
@@ -416,6 +422,7 @@ export class Scenery {
             cm.needsUpdate = true;
         }
         const flick = this.opts.reduceMotion ? 1 : 0.92 + 0.08 * Math.sin(now * 13.1) + 0.05 * Math.sin(now * 7.3);
+        this.fireFlicker = flick;
         this.flame.scale.set(FLAME_W * (0.95 + (1 - flick) * 0.6), FLAME_H * flick, 1);
         const flick2 = this.opts.reduceMotion ? 1 : 0.9 + 0.1 * Math.sin(now * 17.3 + 1.1);
         this.flameCore.scale.set(FLAME_W * 0.6 * (1.05 - (flick2 - 0.9)), FLAME_H * 0.7 * flick2, 1);

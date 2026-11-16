@@ -819,10 +819,11 @@ function Hill3D({ initialTotal }: Props) {
             </AnimatePresence>
 
             {/* 별을 눌러 연 이야기 */}
-            <BottomSheet open={storyOpen} onClose={() => setStoryOpen(false)} title={t("hill_story_title")}>
+            {/* 제목 자리에 주제 이름 (카드 안 주제 표시는 뺌. 보이는 게 많아 헷갈려서) */}
+            <BottomSheet open={storyOpen} onClose={() => setStoryOpen(false)} title={story?.roomTitle || t("hill_story_title")}>
                 {story && (
                     <div ref={storyScrollRef} className="max-h-[70dvh] overflow-y-auto">
-                        <StoryCard key={story.id} story={story} compact showRoom onHidden={() => setStoryOpen(false)} />
+                        <StoryCard key={story.id} story={story} compact onHidden={() => setStoryOpen(false)} />
                         {/* 주제 방 페이지처럼 이어 읽기. 하늘에서도 그 별이 반짝임 */}
                         <button onClick={nextStory} className="mt-3 h-11 w-full rounded-full border border-line text-sm text-ink hover:bg-card-strong active:scale-[0.99]">
                             {t("story_next")} →
