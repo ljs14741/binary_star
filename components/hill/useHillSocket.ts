@@ -10,6 +10,7 @@ export type HillHandlers = {
     onName?: (id: number, n: string | null) => void;
     onGift?: (from: number, to: number) => void;
     onLantern?: (id: number) => void;
+    onTree?: (id: number) => void;
     onStar?: (e: StarEvent) => void;
     onDaily?: (e: DailyEvent) => void;
 };
@@ -56,6 +57,9 @@ export class HillBridge {
     }
     lantern(id: number) {
         this.handlers.onLantern?.(id);
+    }
+    tree(id: number) {
+        this.handlers.onTree?.(id);
     }
     gift(from: number, to: number) {
         this.handlers.onGift?.(from, to);
@@ -126,6 +130,9 @@ export function useHillSocket(enabled: boolean) {
                         break;
                     case "lantern":
                         b.lantern(msg.id);
+                        break;
+                    case "tree":
+                        b.tree(msg.id);
                         break;
                     case "gift":
                         b.gift(msg.from, msg.to);

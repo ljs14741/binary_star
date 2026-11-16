@@ -7,12 +7,13 @@ import * as THREE from "three";
 import type { SkyData, SkyStar } from "@/lib/hill";
 import type { Lang } from "@/lib/i18n/config";
 import type { Gesture, MemberPublic, Pose, StarEvent } from "@/lib/realtime/protocol";
-import { FIRE_KEEP_OUT, FIRE_POS, HILL_HALF_D, HILL_HALF_W, onDock, WISH_DOCK } from "@/lib/realtime/protocol";
+import { FIRE_KEEP_OUT, FIRE_POS, HILL_HALF_D, HILL_HALF_W, onDock, TREE_POS, WISH_DOCK } from "@/lib/realtime/protocol";
 import type { Sfx } from "@/lib/sound";
 import { CREATURE_KINDS, creatureTexture, glowTexture, heartTexture, lanternTexture, moonTexture, ME_PALETTE, PALETTES, textTexture, wrapTitle, type CreatureKind, type Palette } from "./sprites";
 import { assignRooms, ZODIAC, type Shape } from "./constellations";
 import { Scenery } from "./scenery";
 import { isSnowSeason, moonIllumination, moonPhase } from "./season";
+import { ChristmasTree } from "./tree";
 import { azDelta, type Cell, DOME_R, fromAngles, hfovOf, ringLayout, SKY_ORIGIN, SKY_V_CENTER, starAlpha, starPoint, starSize } from "./sky";
 
 export type HighlightInfo = { star: SkyStar; roomIndex: number } | null;
@@ -37,6 +38,7 @@ export type SceneOpts = {
     onWishGo: () => void; // 부두로 걸어가기 시작 (안내 한 줄)
     onWishArrive: () => void; // 내 요정이 부두 끝에 도착 (소원 창 열기)
     onWishTap: (id: number) => void; // 하늘에 뜬 남의 풍등을 누름
+    onTreeTap: () => void; // 크리스마스트리를 누름
     onLookDrag: () => void; // 하늘을 끌어 돌리기 시작 (처음 힌트 끄기)
     getCardRect: () => DOMRect | null; // 가운데 이야기 카드 자리 (부두 이름표가 겹치면 흐리게)
     reduceMotion: boolean;
@@ -205,6 +207,7 @@ export class HillScene {
     private ground: THREE.Mesh;
     private scenery: Scenery;
     private winter = isSnowSeason();
+    private tree: ChristmasTree;
     private snow: THREE.Points | null = null;
     private people = new Map<number, Person>();
     // 하늘(돔·별·별자리·달·오로라·유성)은 아주 멀리 있는 것처럼 카메라를 따라다님. 땅·사람·모닥불은 제자리
@@ -307,6 +310,8 @@ export class HillScene {
         this.scene.add(this.scenery.group);
         this.sky.add(this.scenery.sky);
         this.scene.add(this.makeDock());
+        this.tree = new ChristmasTree(TREE_POS.x, groundY(TREE_POS.x, TREE_POS.z) - 0.05, TREE_POS.z, !!opts.reduceMotion);
+        this.scene.add(this.tree.group);
 
         // 달: 정면 왼쪽 별자리 칸 사이(az -15), 별자리 띠 높이(고도 33). 작게 해서 이름표·문장 카드·칸과 안 겹치고, 폰 왼쪽 가장자리 안에 들어옴
         // 실제 오늘 달 모양. 가늘수록 둘레 빛·바다 달빛 길도 옅게
@@ -1088,6 +1093,10 @@ export class HillScene {
         return g;
     }
 
+    flareTree() {
+        this.tree.flare(this.clock.getElapsedTime());
+    }
+
     // 부두 끝으로 걸어가기 (버튼·부두 누르기). 도착하면 달을 보고 onWishArrive
     goWish() {
         const me = this.meId != null ? this.people.get(this.meId) : null;
@@ -1586,6 +1595,12 @@ export class HillScene {
             this.goWish();
             return;
         }
+        // 크리스마스트리: 불빛이 반짝 (같이 있는 사람들에게도)
+        if (this.nearScreen(this.tree.hitPoints(), cx, cy, rect, 40)) {
+            this.flareTree();
+            this.opts.onTreeTap();
+            return;
+        }
         // 하늘에 뜬 오늘 밤 소원 풍등
         const wishHit = this.skyWishAt(cx, cy, rect);
         if (wishHit != null) {
@@ -1859,6 +1874,7 @@ export class HillScene {
 
         this.scenery.update(now, dt, this.view);
         this.exportHorizon();
+        this.tree.update(now, this.view);
         if (this.snow) {
             this.snow.position.set(cx, 0, cz);
             (this.snow.material as THREE.ShaderMaterial).uniforms.uTime.value = now;
@@ -2137,6 +2153,7 @@ export class HillScene {
         document.removeEventListener("visibilitychange", this.onVis);
         for (const id of [...this.people.keys()]) this.removePerson(id);
         this.scenery.dispose();
+        this.tree.dispose();
         this.scene.traverse((o) => {
             const m = o as THREE.Mesh;
             if (m.geometry) m.geometry.dispose();

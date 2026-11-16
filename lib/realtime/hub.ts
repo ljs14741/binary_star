@@ -3,6 +3,8 @@ import {
     clampHill,
     DAILY_WINDOW_MS,
     FIRE_KEEP_OUT,
+    TREE_KEEP_OUT,
+    TREE_POS,
     FIRE_POS,
     GESTURES,
     HILL_CAP,
@@ -142,6 +144,12 @@ export class Hub {
                 this.broadcastHill(member.hill, { t: "lantern", id: member.id });
                 break;
             }
+            case "tree": {
+                if (now - member.lastGesture < GESTURE_MIN_INTERVAL) return;
+                member.lastGesture = now;
+                this.broadcastHill(member.hill, { t: "tree", id: member.id });
+                break;
+            }
             case "gift": {
                 // 같은 언덕의 다른 사람에게만. 몸짓과 같은 간격 제한
                 if (typeof msg.to !== "number" || msg.to === member.id) return;
@@ -235,6 +243,7 @@ export class Hub {
             const x = round1(clamp(FIRE_POS.x + Math.cos(a) * r, -HILL_HALF_W, HILL_HALF_W));
             const z = round1(clamp(FIRE_POS.z + Math.sin(a) * r, -HILL_HALF_D, HILL_HALF_D));
             if (Math.hypot(x - FIRE_POS.x, z - FIRE_POS.z) < FIRE_KEEP_OUT) continue;
+            if (Math.hypot(x - TREE_POS.x, z - TREE_POS.z) < TREE_KEEP_OUT) continue;
             let gap = Infinity;
             for (const m of hill.members.values()) gap = Math.min(gap, Math.hypot(m.x - x, m.z - z));
             if (gap >= MIN_SEAT_DIST) return { x, z };

@@ -11,6 +11,8 @@ export const HILL_HALF_D = 4.5;
 export const HILL_CAP = 60; // 언덕 정원. 모닥불 둘레에 겹치지 않고 앉을 수 있는 수 (넘치면 같은 하늘의 두 번째 언덕)
 export const MIN_SEAT_DIST = 0.9; // 자리 사이 최소 거리
 export const FIRE_POS = { x: 0, z: -1.2 }; // 모닥불 자리 (언덕 가운데 조금 앞). 자리 배정 때 피함
+export const TREE_POS = { x: 3.4, z: -2.0 }; // 크리스마스트리 (언덕 오른쪽 뒤). 자리 배정 때 피함
+export const TREE_KEEP_OUT = 1.1;
 export const FIRE_KEEP_OUT = 1.7; // 불 둘레 빈자리 (모닥불 키우며 1.3 → 1.7)
 // 소원 부두: 모닥불 왼쪽 앞에서 달(방위 az) 쪽으로 뻗은 나무 부두. 언덕 범위 밖이어도 부두 위면 설 수 있음
 export const WISH_DOCK = { x: -3.2, z: -4.3, az: -15, len: 5.4, halfW: 0.85 };
@@ -41,6 +43,7 @@ export type ClientMsg =
     | { t: "name"; n: string | null }
     | { t: "gift"; to: number } // 다른 요정에게 마음 보내기
     | { t: "lantern" } // 소원 부두에서 풍등 띄움 (소원 글은 HTTP 로 따로 저장)
+    | { t: "tree" } // 트리를 눌러 불빛을 반짝
     | { t: "ping" };
 
 export type StarEvent = { kind: "born" | "glow" | "dim"; storyId: number; roomSlug: string; count: number; lang: string; from?: number };
@@ -54,6 +57,7 @@ export type ServerMsg =
     | { t: "name"; id: number; n: string | null }
     | { t: "gift"; from: number; to: number }
     | { t: "lantern"; id: number }
+    | { t: "tree"; id: number }
     | { t: "star"; e: StarEvent }
     | { t: "count"; total: number; countries: Record<string, number> }
     | { t: "daily"; e: DailyEvent }

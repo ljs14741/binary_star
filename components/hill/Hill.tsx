@@ -301,6 +301,10 @@ function Hill3D({ initialTotal }: Props) {
                 getCardRect: () => cardRef.current?.getBoundingClientRect() ?? null,
                 onWishArrive: () => setWishOpen(true),
                 onWishTap: (id) => setWishTapped(id),
+                onTreeTap: () => {
+                    sound.sfx("twinkle");
+                    bridge.send({ t: "tree" });
+                },
             });
         } catch (e) {
             console.warn("[hill] 3D 실패", e);
@@ -328,6 +332,9 @@ function Hill3D({ initialTotal }: Props) {
                     scene.launchLantern(id);
                     sound.sfx("lanternFar");
                 }
+            },
+            onTree: (id) => {
+                if (id !== bridge.meId) scene.flareTree();
             },
             onName: (id, n) => scene.setName(id, n),
             onStar: (e: StarEvent) => {
