@@ -123,6 +123,10 @@ app.prepare().then(() => {
     });
 
     const wss = new WebSocketServer({ noServer: true, maxPayload: 2048 });
+    const WS_PER_VOTER = 3;
+    const WS_PER_IP = 30;
+    const wsPerVoter = new Map<string, number>();
+    const wsPerIp = new Map<string, number>();
 
     server.on("upgrade", async (req, socket, head) => {
         const path = (req.url || "/").split("?")[0];
@@ -155,12 +159,33 @@ app.prepare().then(() => {
             const v = req.headers[n];
             return Array.isArray(v) ? v[0] : v;
         }, req.socket.remoteAddress || "127.0.0.1");
+        const voterKey = makeVoterKey(vid, ip);
+        // 가짜 요정 막기: 브라우저 하나당 3개, IP 하나당 30개 (통신사 IP 는 여럿이 같이 써서 넉넉히)
+        if ((wsPerVoter.get(voterKey) ?? 0) >= WS_PER_VOTER || (wsPerIp.get(ip) ?? 0) >= WS_PER_IP) {
+            socket.destroy();
+            return;
+        }
         const geo = await lookupGeo(ip, req.headers["accept-language"] ?? null, dev ? cookieValue(cookie, "star_dev_geo") : null);
         if (socket.destroyed) return;
         wss.handleUpgrade(req, socket, head, (ws) => {
-            attach(ws, makeVoterKey(vid, ip), geo.country);
+            countUp(wsPerVoter, voterKey);
+            countUp(wsPerIp, ip);
+            ws.once("close", () => {
+                countDown(wsPerVoter, voterKey);
+                countDown(wsPerIp, ip);
+            });
+            attach(ws, voterKey, geo.country);
         });
     });
+
+    function countUp(m: Map<string, number>, k: string) {
+        m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    function countDown(m: Map<string, number>, k: string) {
+        const n = (m.get(k) ?? 1) - 1;
+        if (n > 0) m.set(k, n);
+        else m.delete(k);
+    }
 
     function attach(ws: WebSocket, voterKey: string, country: string | null) {
         const sock = { send: (d: string) => ws.send(d), close: () => ws.close() };
