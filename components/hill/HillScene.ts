@@ -94,6 +94,7 @@ const MOON_DIR = { x: Math.sin(MOON_AZ * (Math.PI / 180)), z: -Math.cos(MOON_AZ 
 const DOCK_LEN = WISH_DOCK.len;
 const WISH_RUN = 1.45; // 부두로 갈 때는 총총 빠르게
 const DOCK_CAM_FWD = 4; // 부두 위에 서면 카메라가 이만큼 다가감 (내가 거기 서 있는 느낌)
+const TAG_MAX_PX = 24; // 별명표 글자 높이 상한(화면 px)
 const TAG_H = 0.28,
     TAG_Y = 1.0; // 별명표 높이·자리(요정 머리 위)
 const ORBIT_R = SKY_ORIGIN.z - FIRE_POS.z; // 카메라가 모닥불 둘레를 도는 반지름 (정면일 때 SKY_ORIGIN 자리)
@@ -1385,7 +1386,10 @@ export class HillScene {
             v.project(this.camera);
             if (v.z > 1) continue;
             const ppw = H / (2 * dist * tanHalf); // 이 깊이에서 월드 1 이 몇 px
-            const h = TAG_H * ppw,
+            // 카메라 바로 앞(부두에서 다가갔을 때 등) 이름표가 화면을 가로지르지 않게 화면 높이 상한
+            const k = Math.min(1, TAG_MAX_PX / (TAG_H * ppw));
+            p.tag.scale.set(TAG_H * k * p.tagAspect, TAG_H * k, 1);
+            const h = TAG_H * k * ppw,
                 w = h * p.tagAspect * 0.92 + 4; // 글자 둘레 여백은 조금 빼고, 옆 이름표와 틈 4px
             items.push({ p, x: ((v.x + 1) / 2) * (this.canvas.clientWidth || window.innerWidth), y: ((1 - v.y) / 2) * H, w, h, ppw, dist });
         }
