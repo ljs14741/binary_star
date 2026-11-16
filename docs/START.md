@@ -28,6 +28,7 @@
 - 헤드리스 캡처: playwright-core(`~/.claude/skills/web-promo-video/tools/node_modules`) + `~/.cache/ms-playwright/chromium-1243/chrome-linux64/chrome` + `--use-angle=swiftshader`, `waitUntil: "load"`(networkidle 은 dev 에서 타임아웃). 스크립트·스크린샷은 `.tmp/`(git 밖). 개발 디버그 `window.__hill.*`
 - 브라우저 B 는 시크릿 + `/api/dev/geo?set=JP,Tokyo,35.7,139.7`. 의식 강제 `/api/dev/daily`. 시드 `npm run db:seed`(출시 전 `db:clear-seed`)
 - 임시 글·소원은 `.tmp/*.ts`(첫 줄 `import "../lib/load-env"`, async main, `../lib/prisma`)로 만들고 끝나면 꼭 삭제. 사용자 소원(id 23·24·36)은 건드리지 않기
+- 큰 수정 뒤 전체 훑기: `node scripts/sweep.mjs` (dev 서버 필요, 화면 3종 × 주요 동작·페이지·언어, 문제 목록 + `.tmp/sweep/*.png`)
 - 운영 배포 확인: push 뒤 `ps -o lstart= -p $(ps -eo pid,args | grep "[s]h -c NODE_ENV=production" | awk '{print $1}')` 가 커밋 시각보다 뒤면 새 코드. 보통 2~3분
 
 ## 함정 (꼭 지킬 것)
