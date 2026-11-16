@@ -41,7 +41,7 @@ export function proxy(req: NextRequest) {
 
 export const config = {
     // 정적 파일·이미지·api 는 건너뜀 (api 는 각 라우트가 쿠키 직접 처리)
-    matcher: ["/((?!api|_next|favicon.ico|icon.png|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml|json|js|css|woff2?)).*)"],
+    matcher: ["/((?!api|_next|favicon.ico|icon.png|robots.txt|sitemap.xml|.*\\.(?:png|jpg|jpeg|svg|webp|ico|txt|xml|json|js|css|woff2?|html)).*)"],
 };
 
 export { LANGS };
