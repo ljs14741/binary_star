@@ -199,3 +199,35 @@ model wish_report {
 
   @@unique([wish_id, ip_hash])
 }
+
+// 방명록: 사이트에 남기는 한마디 (공개). 운영자가 답글을 달 수 있음
+model guestbook {
+  id           Int                @id @default(autoincrement())
+  nickname     String?            @db.VarChar(40)
+  body         String             @db.VarChar(1200)
+  lang         String             @db.VarChar(8)
+  country      String?            @db.VarChar(2)
+  voter_key    String             @db.VarChar(64)
+  ip_hash      String?            @db.VarChar(64)
+  kst_day      String             @db.VarChar(10)
+  status       String             @default("public") @db.VarChar(16) // public | private(위기 낱말) | hidden(신고·관리자)
+  report_count Int                @default(0)
+  reply        String?            @db.VarChar(1200) // 운영자 답글
+  reply_at     DateTime?          @db.Timestamp(0)
+  created_at   DateTime           @default(now()) @db.Timestamp(0)
+  reports      guestbook_report[]
+
+  @@index([status, id])
+  @@index([voter_key, kst_day])
+  @@index([ip_hash, kst_day])
+}
+
+model guestbook_report {
+  id           Int       @id @default(autoincrement())
+  guestbook_id Int
+  ip_hash      String    @db.VarChar(64)
+  created_at   DateTime  @default(now()) @db.Timestamp(0)
+  entry        guestbook @relation(fields: [guestbook_id], references: [id], onDelete: Cascade)
+
+  @@unique([guestbook_id, ip_hash])
+}

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Coffee, MoonStar, Smile, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, CircleHelp, Coffee, MessageCircleHeart, MoonStar, Smile, PenLine, Share2, Sparkles, Users, Volume2, VolumeX, X } from "lucide-react";
 import type { SkyData } from "@/lib/hill";
 import type { StoryView } from "@/lib/stories";
 import { EMOTES, HILL_CAP, type Gesture, type StarEvent } from "@/lib/realtime/protocol";
@@ -694,6 +694,10 @@ function Hill3D({ initialTotal }: Props) {
                         {t("help_ok")}
                     </button>
                 </div>
+                {/* 방명록: 의견 듣기 */}
+                <Link href={langPath(lang, "/guestbook")} className="mt-3 flex h-11 w-full items-center justify-center gap-1.5 rounded-full border border-line text-sm text-ink hover:bg-card-strong">
+                    <MessageCircleHeart size={15} className="text-star-soft" /> {t("nav_guestbook")}
+                </Link>
                 {/* binaryworld 의 다른 놀거리 */}
                 <p className="mt-5 text-[12px] text-dim">{t("help_more")}</p>
                 <div className="mt-2 flex flex-wrap gap-1.5">

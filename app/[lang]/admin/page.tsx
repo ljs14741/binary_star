@@ -7,6 +7,7 @@ import TopicSwap from "./TopicSwap";
 import AdminDonations from "./AdminDonations";
 import AdminWishes from "./AdminWishes";
 import AdminLive from "./AdminLive";
+import AdminGuestbook from "./AdminGuestbook";
 import AdminLogin from "./AdminLogin";
 import AdminRemember from "./AdminRemember";
 
@@ -119,6 +120,9 @@ export default async function AdminPage({ params, searchParams }: P) {
 
             <h2 className="mt-6 text-sm font-semibold text-ink">이번 달 주제 교체</h2>
             <TopicSwap plan={plan} slots={TOPIC_SLOTS} adminKey={adminKey} />
+
+            <h2 className="mt-6 text-sm font-semibold text-ink">방명록 (최근 60개)</h2>
+            <AdminGuestbook adminKey={adminKey} />
 
             <h2 className="mt-6 text-sm font-semibold text-ink">소원 부두 (최근 60개)</h2>
             <AdminWishes adminKey={adminKey} />

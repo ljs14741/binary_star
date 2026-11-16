@@ -15,6 +15,7 @@ export default function SiteFooter() {
                 <Link href={langPath(lang, "/privacy")}>{t("nav_privacy")}</Link>
                 <Link href={langPath(lang, "/terms")}>{t("nav_terms")}</Link>
                 <Link href={langPath(lang, "/propose")}>{t("nav_propose")}</Link>
+                <Link href={langPath(lang, "/guestbook")}>{t("nav_guestbook")}</Link>
             </nav>
             <p className="mb-2 flex flex-wrap justify-center gap-x-2 gap-y-1">
                 <span className="text-dim">{t("footer_sister")}</span>
