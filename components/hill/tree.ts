@@ -3,61 +3,127 @@
 import * as THREE from "three";
 import { glowTexture } from "./sprites";
 
-const W = 2.0,
-    H = 2.9; // 트리 크기(월드). 요정 키의 두 배 남짓
+const W = 2.1,
+    H = 3.15; // 트리 크기(월드). 요정 키의 두 배 남짓
 
-// 실루엣 그림: 3단 가지, 가지 끝에 눈
+// 그림 크기(px). 트리 평면 좌표(u: 왼→오 0~1, v: 아래→위 0~1)와 맞춤
+const TW = 384,
+    TH = 576;
+// 4단 가지: [꼭짓점 y, 아래 y, 아래 반폭]
+const TIERS: [number, number, number][] = [
+    [52, 175, 78],
+    [120, 285, 112],
+    [215, 400, 146],
+    [320, 505, 176],
+];
+// 금빛 줄(가랜드): 각 단을 비스듬히 가로지르는 처진 곡선 [x0, y0, 조절x, 조절y, x1, y1]
+const GARLANDS: [number, number, number, number, number, number][] = [
+    [150, 150, 196, 190, 238, 140],
+    [118, 262, 185, 312, 272, 246],
+    [92, 372, 196, 432, 300, 358],
+    [70, 478, 192, 540, 318, 468],
+];
+const qb = (a: number, b: number, c: number, t: number) => (1 - t) * (1 - t) * a + 2 * (1 - t) * t * b + t * t * c;
+
+// 실루엣 그림: 4단 가지(삐죽한 끝), 가지 끝에 눈, 금빛 줄, 작은 장식 공
 function treeTexture(): THREE.Texture {
     const c = document.createElement("canvas");
-    c.width = 256;
-    c.height = 384;
+    c.width = TW;
+    c.height = TH;
     const g = c.getContext("2d")!;
+    const cx = TW / 2;
     // 줄기
-    g.fillStyle = "#24170f";
-    g.fillRect(116, 330, 24, 54);
-    // 가지 3단 (아래가 넓게). 각 단은 아래가 살짝 처진 삼각형
-    // [가운데 x, 꼭짓점 y, 아래 y]
-    const tiers: [number, number, number][] = [
-        [128, 40, 150],
-        [128, 120, 250],
-        [128, 205, 340],
-    ];
-    const halfW = [62, 92, 120];
-    tiers.forEach(([cx, top, bottom], i) => {
-        const hw = halfW[i];
-        const grad = g.createLinearGradient(0, top, 0, bottom);
-        grad.addColorStop(0, "#1e4a3c");
-        grad.addColorStop(1, "#0d2621");
+    g.fillStyle = "#2a1a10";
+    g.fillRect(cx - 16, 495, 32, 81);
+    TIERS.forEach(([top, bottom, hw]) => {
+        // 가지: 꼭짓점에서 양옆으로 내려가며 끝이 삐죽삐죽
+        const grad = g.createLinearGradient(cx - hw, 0, cx + hw, 0);
+        grad.addColorStop(0, "#255c47");
+        grad.addColorStop(0.45, "#1a4a39");
+        grad.addColorStop(1, "#0e2a22");
         g.fillStyle = grad;
         g.beginPath();
         g.moveTo(cx, top);
-        g.quadraticCurveTo(cx + hw * 0.55, top + (bottom - top) * 0.55, cx + hw, bottom);
-        // 아랫단 가장자리: 물결
-        for (let k = 1; k <= 6; k++) {
-            const x = cx + hw - (hw * 2 * k) / 6;
-            g.quadraticCurveTo(x + hw / 6, bottom + 10, x, bottom);
+        const n = 7;
+        for (let k = 1; k <= n; k++) {
+            const t = k / n;
+            g.lineTo(cx + hw * t * 0.82, top + (bottom - top) * t * 0.92);
+            g.lineTo(cx + hw * t, top + (bottom - top) * t);
         }
-        g.quadraticCurveTo(cx - hw * 0.55, top + (bottom - top) * 0.55, cx, top);
+        for (let k = 0; k <= 8; k++) {
+            const x = cx + hw - (hw * 2 * k) / 8;
+            g.lineTo(x, bottom + (k % 2 ? 9 : 0));
+        }
+        for (let k = n; k >= 1; k--) {
+            const t = k / n;
+            g.lineTo(cx - hw * t, top + (bottom - top) * t);
+            g.lineTo(cx - hw * t * 0.82, top + (bottom - top) * t * 0.92);
+        }
+        g.closePath();
         g.fill();
-        // 눈: 각 단 아랫 가장자리와 꼭대기에 옅은 흰빛
-        g.strokeStyle = "rgba(220,230,255,0.42)";
-        g.lineWidth = 5;
-        g.lineCap = "round";
+        // 달빛 받는 왼쪽 가장자리 살짝 밝게
+        g.strokeStyle = "rgba(170,210,255,0.18)";
+        g.lineWidth = 3;
         g.beginPath();
-        for (let k = 0; k < 6; k++) {
-            const x0 = cx + hw - (hw * 2 * k) / 6;
-            const x1 = cx + hw - (hw * 2 * (k + 1)) / 6;
-            g.moveTo(x0 - 4, bottom - 3);
-            g.quadraticCurveTo((x0 + x1) / 2, bottom + 5, x1 + 4, bottom - 3);
-        }
+        g.moveTo(cx, top + 4);
+        g.lineTo(cx - hw + 6, bottom - 4);
         g.stroke();
-        g.fillStyle = "rgba(215,226,255,0.5)";
+        // 눈: 아래 가장자리 물결 + 가지 끝 덩어리
+        g.fillStyle = "rgba(236,242,255,0.92)";
+        for (let k = 0; k < 8; k++) {
+            const x0 = cx + hw - (hw * 2 * k) / 8;
+            g.beginPath();
+            g.ellipse(x0 - hw / 8, bottom - 1, hw / 9, 5.5, 0, 0, Math.PI * 2);
+            g.fill();
+        }
         g.beginPath();
-        g.ellipse(cx, top + 14, 10, 6, 0, 0, Math.PI * 2);
+        g.ellipse(cx, top + 10, 11, 7, 0, 0, Math.PI * 2);
         g.fill();
     });
+    // 금빛 줄
+    g.strokeStyle = "rgba(255,214,130,0.75)";
+    g.lineWidth = 2.5;
+    for (const [x0, y0, x1c, y1c, x1, y1] of GARLANDS) {
+        g.beginPath();
+        g.moveTo(x0, y0);
+        g.quadraticCurveTo(x1c, y1c, x1, y1);
+        g.stroke();
+    }
+    // 전구 알: 금빛 줄 위 (반짝임은 위에 얹는 빛 스프라이트가 함)
+    GARLANDS.forEach(([x0, y0, xc, yc, x1, y1], i) => {
+        const n = 4 + i;
+        for (let k = 0; k < n; k++) {
+            const t = (k + 0.5) / n;
+            const x = qb(x0, xc, x1, t),
+                y = qb(y0, yc, y1, t);
+            const gl = g.createRadialGradient(x, y, 0, x, y, 9);
+            gl.addColorStop(0, "rgba(255,240,190,1)");
+            gl.addColorStop(0.35, "rgba(255,214,130,0.9)");
+            gl.addColorStop(1, "rgba(255,200,110,0)");
+            g.fillStyle = gl;
+            g.beginPath();
+            g.arc(x, y, 9, 0, Math.PI * 2);
+            g.fill();
+        }
+    });
+    // 장식 공 (빨강·금·파랑, 조금씩)
+    const BALLS: [number, number, string][] = [
+        [168, 232, "#d8555f"], [230, 330, "#e8c36a"], [140, 342, "#7fa7e0"], [262, 418, "#d8555f"],
+        [118, 452, "#e8c36a"], [214, 478, "#7fa7e0"], [300, 486, "#e8c36a"], [196, 170, "#e8c36a"],
+    ];
+    for (const [x, y, col] of BALLS) {
+        g.fillStyle = col;
+        g.beginPath();
+        g.arc(x, y, 9, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = "rgba(255,255,255,0.7)";
+        g.beginPath();
+        g.arc(x - 3, y - 3, 2.6, 0, Math.PI * 2);
+        g.fill();
+    }
     const t = new THREE.CanvasTexture(c);
     t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = 4;
     return t;
 }
 
@@ -71,7 +137,7 @@ function starTexture(): THREE.Texture {
     g.shadowBlur = 10;
     g.beginPath();
     for (let i = 0; i < 10; i++) {
-        const r = i % 2 ? 9 : 22;
+        const r = i % 2 ? 10 : 24;
         const a = -Math.PI / 2 + (i * Math.PI) / 5;
         g.lineTo(32 + Math.cos(a) * r, 32 + Math.sin(a) * r);
     }
@@ -82,19 +148,20 @@ function starTexture(): THREE.Texture {
     return t;
 }
 
-// 전구 자리 (트리 평면 좌표, 0~1: x 왼→오, y 아래→위). 가지를 따라 비스듬히 감기는 줄
-const BULBS: [number, number][] = [
-    [0.47, 0.8], [0.56, 0.74],
-    [0.38, 0.66], [0.5, 0.62], [0.62, 0.57],
-    [0.3, 0.47], [0.43, 0.44], [0.57, 0.41], [0.7, 0.37],
-    [0.24, 0.24], [0.37, 0.22], [0.5, 0.2], [0.63, 0.18], [0.77, 0.15],
-];
+// 전구 자리: 금빛 줄을 따라 고르게 (트리 평면 좌표)
+const BULBS: [number, number][] = GARLANDS.flatMap(([x0, y0, xc, yc, x1, y1], i) =>
+    Array.from({ length: 4 + i }, (_, k) => {
+        const t = (k + 0.5) / (4 + i);
+        return [qb(x0, xc, x1, t) / TW, 1 - qb(y0, yc, y1, t) / TH] as [number, number];
+    }),
+);
 
 export class ChristmasTree {
     group = new THREE.Group();
     private bulbs: { s: THREE.Sprite; phase: number; speed: number }[] = [];
     private star: THREE.Sprite;
     private starGlow: THREE.Sprite;
+    private base!: THREE.Mesh;
     private flareAt = -10;
     private texs: THREE.Texture[] = [];
 
@@ -107,10 +174,16 @@ export class ChristmasTree {
         body.center.set(0.5, 0);
         body.scale.set(W, H, 1);
         this.group.add(body);
+        // 발밑 눈 위 따뜻한 불빛
+        const base = new THREE.Mesh(new THREE.PlaneGeometry(3.2, 3.2), new THREE.MeshBasicMaterial({ map: glowTexture("255,200,120"), transparent: true, opacity: 0.28, depthWrite: false, blending: THREE.AdditiveBlending }));
+        base.rotation.x = -Math.PI / 2;
+        base.position.y = 0.04;
+        this.base = base;
+        this.group.add(base);
         const bulbTex = glowTexture("255,214,140");
         for (const [u, v] of BULBS) {
             const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: bulbTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.8 }));
-            s.position.set((u - 0.5) * W, v * H, 0.02);
+            s.position.set((u - 0.5) * W, v * H, 0.15);
             s.scale.set(0.2, 0.2, 1);
             s.renderOrder = 2; // 트리 그림 위에
             this.group.add(s);
@@ -118,11 +191,11 @@ export class ChristmasTree {
         }
         const st = starTexture();
         this.star = new THREE.Sprite(new THREE.SpriteMaterial({ map: st, transparent: true, depthWrite: false }));
-        this.star.position.set(0, H * 0.985, 0.03);
-        this.star.scale.set(0.34, 0.34, 1);
+        this.star.position.set(0, H * 0.935, 0.2);
+        this.star.scale.set(0.44, 0.44, 1);
         this.starGlow = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture("255,216,107"), transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.45 }));
         this.starGlow.position.copy(this.star.position);
-        this.starGlow.scale.set(1.1, 1.1, 1);
+        this.starGlow.scale.set(1.3, 1.3, 1);
         this.starGlow.renderOrder = 2;
         this.star.renderOrder = 3;
         this.group.add(this.starGlow, this.star);
@@ -150,13 +223,14 @@ export class ChristmasTree {
             const v = b.s.position.y / H;
             const wave = since >= 0 && since < 2 ? Math.max(0, 1 - Math.abs(since * 1.6 - v * 1.2) * 2.2) : 0;
             const m = b.s.material as THREE.SpriteMaterial;
-            m.opacity = Math.min(1, tw * 0.85 + wave);
-            const sc = 0.24 + wave * 0.24;
+            m.opacity = Math.min(1, 0.35 + tw * 0.65 + wave);
+            const sc = 0.32 + wave * 0.26;
             b.s.scale.set(sc, sc, 1);
         }
         const starWave = since >= 0 && since < 2.4 ? Math.max(0, 1 - Math.abs(since - 1.1) * 1.4) : 0;
         const pulse = this.reduceMotion ? 0.45 : 0.4 + 0.1 * Math.sin(now * 1.3);
         (this.starGlow.material as THREE.SpriteMaterial).opacity = pulse + starWave * 0.5;
+        (this.base.material as THREE.MeshBasicMaterial).opacity = 0.24 + 0.04 * Math.sin(now * 1.7) + starWave * 0.25;
         const ss = 1.1 + starWave * 1.2;
         this.starGlow.scale.set(ss, ss, 1);
     }
