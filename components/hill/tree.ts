@@ -158,7 +158,7 @@ const BULBS: [number, number][] = GARLANDS.flatMap(([x0, y0, xc, yc, x1, y1], i)
 
 export class ChristmasTree {
     group = new THREE.Group();
-    private bulbs: { s: THREE.Sprite; phase: number; speed: number }[] = [];
+    private bulbMat: THREE.ShaderMaterial; // 전구 전부를 점 하나의 그리기로 (따로 그리면 그리기 명령이 22개 늘어 폰에서 무거움)
     private star: THREE.Sprite;
     private starGlow: THREE.Sprite;
     private base!: THREE.Mesh;
@@ -181,14 +181,45 @@ export class ChristmasTree {
         this.base = base;
         this.group.add(base);
         const bulbTex = glowTexture("255,214,140");
-        for (const [u, v] of BULBS) {
-            const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: bulbTex, transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, opacity: 0.8 }));
-            s.position.set((u - 0.5) * W, v * H, 0.15);
-            s.scale.set(0.2, 0.2, 1);
-            s.renderOrder = 2; // 트리 그림 위에
-            this.group.add(s);
-            this.bulbs.push({ s, phase: Math.random() * Math.PI * 2, speed: 0.8 + Math.random() * 1.4 });
-        }
+        const n = BULBS.length;
+        const pos = new Float32Array(n * 3),
+            aPhase = new Float32Array(n),
+            aSpeed = new Float32Array(n);
+        BULBS.forEach(([u, v], i) => {
+            pos.set([(u - 0.5) * W, v * H, 0.15], i * 3);
+            aPhase[i] = Math.random() * Math.PI * 2;
+            aSpeed[i] = 0.8 + Math.random() * 1.4;
+        });
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+        geo.setAttribute("aPhase", new THREE.BufferAttribute(aPhase, 1));
+        geo.setAttribute("aSpeed", new THREE.BufferAttribute(aSpeed, 1));
+        this.bulbMat = new THREE.ShaderMaterial({
+            uniforms: { uMap: { value: bulbTex }, uTime: { value: 0 }, uSince: { value: 10 }, uStill: { value: reduceMotion ? 1 : 0 }, uViewH: { value: 800 } },
+            vertexShader: `
+attribute float aPhase; attribute float aSpeed;
+uniform float uTime; uniform float uSince; uniform float uStill; uniform float uViewH;
+varying float vA;
+void main(){
+    float tw = uStill > 0.5 ? 0.8 : 0.55 + 0.45 * sin(uTime * aSpeed + aPhase);
+    float v = position.y / ${H.toFixed(3)};
+    float wave = (uSince >= 0.0 && uSince < 2.0) ? max(0.0, 1.0 - abs(uSince * 1.6 - v * 1.2) * 2.2) : 0.0;
+    vA = min(1.0, 0.35 + tw * 0.65 + wave);
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    // 월드 크기(0.32, 반짝일 때 더 큼) → 화면 px
+    gl_PointSize = (0.32 + wave * 0.26) * projectionMatrix[1][1] * uViewH * 0.5 / max(0.1, -mv.z);
+}`,
+            fragmentShader: `
+uniform sampler2D uMap; varying float vA;
+void main(){ vec4 c = texture2D(uMap, gl_PointCoord); gl_FragColor = vec4(c.rgb, c.a * vA); }`,
+            transparent: true,
+            depthWrite: false,
+            blending: THREE.AdditiveBlending,
+        });
+        const bulbs = new THREE.Points(geo, this.bulbMat);
+        bulbs.renderOrder = 2; // 트리 그림 위에
+        this.group.add(bulbs);
         const st = starTexture();
         this.star = new THREE.Sprite(new THREE.SpriteMaterial({ map: st, transparent: true, depthWrite: false }));
         this.star.position.set(0, H * 0.935, 0.2);
@@ -214,19 +245,14 @@ export class ChristmasTree {
     }
 
     // view: 카메라가 보는 방향(라디안). 트리 평면을 카메라 쪽으로
-    update(now: number, view: number) {
+    // viewH: 그리는 화면 높이(px, 픽셀 비율 포함) — 전구 크기 계산용
+    update(now: number, view: number, viewH: number) {
         this.group.rotation.y = -view;
         const since = now - this.flareAt;
-        for (const b of this.bulbs) {
-            const tw = this.reduceMotion ? 0.8 : 0.55 + 0.45 * Math.sin(now * b.speed + b.phase);
-            // 반짝 퍼짐: 아래 전구부터 차례로 밝아졌다 돌아옴
-            const v = b.s.position.y / H;
-            const wave = since >= 0 && since < 2 ? Math.max(0, 1 - Math.abs(since * 1.6 - v * 1.2) * 2.2) : 0;
-            const m = b.s.material as THREE.SpriteMaterial;
-            m.opacity = Math.min(1, 0.35 + tw * 0.65 + wave);
-            const sc = 0.32 + wave * 0.26;
-            b.s.scale.set(sc, sc, 1);
-        }
+        // 반짝임·퍼짐(아래 전구부터 차례로)은 셰이더에서
+        this.bulbMat.uniforms.uTime.value = now;
+        this.bulbMat.uniforms.uSince.value = since;
+        this.bulbMat.uniforms.uViewH.value = viewH;
         const starWave = since >= 0 && since < 2.4 ? Math.max(0, 1 - Math.abs(since - 1.1) * 1.4) : 0;
         const pulse = this.reduceMotion ? 0.45 : 0.4 + 0.1 * Math.sin(now * 1.3);
         (this.starGlow.material as THREE.SpriteMaterial).opacity = pulse + starWave * 0.5;

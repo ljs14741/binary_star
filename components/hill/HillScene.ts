@@ -1907,7 +1907,7 @@ export class HillScene {
 
         this.scenery.update(now, dt, this.view);
         this.exportHorizon();
-        this.tree.update(now, this.view);
+        this.tree.update(now, this.view, this.renderer.domElement.height);
         if (this.snow) {
             this.snow.position.set(cx, 0, cz);
             (this.snow.material as THREE.ShaderMaterial).uniforms.uTime.value = now;
