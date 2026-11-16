@@ -306,6 +306,7 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     bw_go: "去看看",
     help_more: "binaryworld 的其他好玩的",
     wish_label: "許願碼頭",
+    wish_sky_title: "許願天空",
     wish_button: "許願",
     wish_title: "向月亮許願",
     wish_count: "現在天上有 {n} 盞天燈",

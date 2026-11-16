@@ -33,6 +33,7 @@ export type SceneOpts = {
     onGift: (to: number) => void;
     // 소원 부두
     wishLabel: string; // 부두 이름표
+    wishSkyLabel: string; // 소원 하늘 이름표 (달 아래)
     onWishGo: () => void; // 부두로 걸어가기 시작 (안내 한 줄)
     onWishArrive: () => void; // 내 요정이 부두 끝에 도착 (소원 창 열기)
     onWishTap: (id: number) => void; // 하늘에 뜬 남의 풍등을 누름
@@ -78,7 +79,12 @@ void main(){
 }`;
 
 const MOON_AZ = -15,
-    MOON_ELEV = 33; // 달 방위·고도(도). 바다 달빛 길(scenery)도 같은 방위
+    MOON_ELEV = 24; // 달 방위·고도(도). 바다 달빛 길(scenery)·부두(WISH_DOCK.az)도 같은 방위. 별자리 띠보다 낮게
+// 하늘 고리 = 별자리 12칸 + 소원 하늘 1칸(13번째, 번호 12). 소원 칸이 달(부두 방향)에 오게 고리를 돌림
+export const WISH_INDEX = ZODIAC.length;
+const RING_N = ZODIAC.length + 1;
+const RING_OFFSET = MOON_AZ - WISH_INDEX * (360 / RING_N);
+const WISH_HALF = 360 / RING_N / 2 - 2.5; // 풍등이 퍼지는 좌우 폭(도). 옆 별자리와 안 겹치게
 const PORTRAIT_CAM_FWD = 3.2; // 세로 화면에서 카메라가 섬 쪽으로 다가가는 거리
 // 소원 부두: 모닥불 왼쪽 앞, 달 쪽으로 뻗은 나무 부두 (자리·길이는 protocol 의 WISH_DOCK, 서버도 같은 값으로 부두 위를 허용)
 const WISH_SPOT = { x: WISH_DOCK.x, z: WISH_DOCK.z };
@@ -242,6 +248,7 @@ export class HillScene {
     private pitch = 0;
     private pitchTarget = 0;
     private index = 0;
+    private skyLaid = false;
     private dragging = false;
     // walk: 땅(섬)을 잡고 끌면 내 요정이 손가락을 따라 걸음. look: 하늘을 끌면 돌아봄
     private pointer: {
@@ -315,6 +322,13 @@ export class HillScene {
         moon.scale.set(4.2, 4.2, 1);
         this.sky.add(moon);
         this.scenery.setMoonLight(illum);
+        // 달 아래 이름표: 별자리 칸처럼 "여기는 소원 하늘"
+        const wl = textTexture(`🏮 ${opts.wishSkyLabel}`, { size: 44, color: "#ffe2b0", font: "600", pad: 24 });
+        const wishLabel = new THREE.Sprite(new THREE.SpriteMaterial({ map: wl.tex, transparent: true, depthWrite: false, opacity: 0.55 }));
+        const wlAt = fromAngles(MOON_AZ, MOON_ELEV - 5.5, DOME_R * 1.05);
+        wishLabel.position.set(wlAt.x, wlAt.y, wlAt.z);
+        wishLabel.scale.set(2.3 * wl.aspect, 2.3, 1);
+        this.sky.add(wishLabel);
 
         // 겨울(12~2월)엔 눈. 움직임 줄이기를 켠 사람에겐 안 내림
         if (this.winter && !opts.reduceMotion) {
@@ -531,7 +545,12 @@ export class HillScene {
         const prevScale = new Map(this.constellations.map((c) => [c.index, c.scale]));
         this.clearSky();
         const now = this.clock.getElapsedTime();
-        const cells = ringLayout(ZODIAC.length);
+        const cells = ringLayout(RING_N, RING_OFFSET);
+        // 처음 그릴 때 시선을 0번 별자리에 맞춤 (고리를 돌려서 정면이 아님)
+        if (!this.skyLaid) {
+            this.skyLaid = true;
+            this.view = cells[0].az * DEG;
+        }
         const assign = assignRooms(data.rooms.map((r) => r.slug));
         const roomAt = new Map<number, (typeof data.rooms)[number]>();
         for (const r of data.rooms) {
@@ -671,11 +690,11 @@ export class HillScene {
     // 별자리 고르기 (‹ › · 띠 · 쓸기 · 별자리 누르기). 카메라가 그쪽으로 돎
     goTo(index: number) {
         if (this.constellations.length === 0) return;
-        const n = this.constellations.length;
+        const n = this.constellations.length + 1; // + 소원 하늘
         const next = ((index % n) + n) % n;
         this.select(next);
         // 가장 가까운 방향으로 돌기
-        const want = this.constellations[next].cell.az * DEG;
+        const want = (next === WISH_INDEX ? MOON_AZ : this.constellations[next].cell.az) * DEG;
         const cur = this.view;
         const full = Math.PI * 2;
         let t = want;
@@ -685,13 +704,13 @@ export class HillScene {
         this.viewVel = 0;
     }
 
-    // 주제가 있는 다음/이전 별자리로
-    goToRoom(dir: number) {
-        const n = this.constellations.length;
-        if (!n) return;
+    // 주제가 있는 다음/이전 별자리로. withWish 면 소원 하늘도 한 칸으로 들름(‹ › 화살표)
+    goToRoom(dir: number, withWish = true) {
+        if (!this.constellations.length) return;
+        const n = this.constellations.length + 1;
         for (let k = 1; k <= n; k++) {
             const i = (((this.index + dir * k) % n) + n) % n;
-            if (this.constellations[i].slug) {
+            if (i === WISH_INDEX ? withWish : this.constellations[i].slug) {
                 this.goTo(i);
                 return;
             }
@@ -722,6 +741,7 @@ export class HillScene {
                 best = c.index;
             }
         }
+        if (this.constellations.length && Math.abs(azDelta(MOON_AZ, az)) < bestD) best = WISH_INDEX;
         return best;
     }
 
@@ -771,12 +791,12 @@ export class HillScene {
         // 방금 조작했으면(걷기·끌기·누르기) 별자리를 자동으로 바꾸지 않음. 지금 별자리의 별만 돌림
         const idle = this.clock.getElapsedTime() - this.lastInputAt >= IDLE_BEFORE_AUTO;
         if (c.starIds.length === 0) {
-            if (idle) this.goToRoom(1);
+            if (idle) this.goToRoom(1, false);
             return HIGHLIGHT_EVERY;
         }
         if (this.highlightCursor + 1 >= c.starIds.length) {
             if (idle) {
-                this.goToRoom(1);
+                this.goToRoom(1, false);
                 return 0.9;
             }
             this.highlightCursor = -1;
@@ -1134,8 +1154,10 @@ export class HillScene {
             const h = Math.sin(w.id * 12.9898) * 43758.5453;
             const r1 = h - Math.floor(h),
                 r2 = (h * 7.13) % 1 < 0 ? ((h * 7.13) % 1) + 1 : (h * 7.13) % 1;
-            const az = MOON_AZ + 4 + (r1 * 2 - 1) * 24,
-                el = 12 + r2 * 26; // 달 둘레에 모아 폰 정면 화면에도 보이게
+            const az = MOON_AZ + (r1 * 2 - 1) * WISH_HALF,
+                el0 = 9 + r2 * 30; // 소원 하늘 칸 안, 달 둘레에만 (옆 별자리와 안 섞이게)
+            // 달과 그 아래 이름표 자리는 비켜 감
+            const el = Math.abs(az - MOON_AZ) < 7 && el0 > MOON_ELEV - 10 && el0 < MOON_ELEV + 5 ? (el0 < MOON_ELEV - 3 ? MOON_ELEV - 13 : MOON_ELEV + 8) : el0;
             const p = fromAngles(az, el, DOME_R * 0.92);
             const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.lanternTex, transparent: true, depthWrite: false, opacity: 0.9 }));
             s.position.set(p.x, p.y, p.z);

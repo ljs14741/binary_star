@@ -305,6 +305,7 @@ export const ko = {
     bw_go: "가 볼게요",
     help_more: "binaryworld 의 다른 놀거리",
     wish_label: "소원 부두",
+    wish_sky_title: "소원 하늘",
     wish_button: "소원 빌기",
     wish_title: "달에게 소원 빌기",
     wish_count: "지금 하늘에 풍등 {n}개",

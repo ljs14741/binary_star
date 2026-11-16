@@ -22,11 +22,11 @@ export function hfovOf(vfovDeg: number, aspect: number): number {
     return (2 * Math.atan(Math.tan((vfovDeg / 2) * DEG) * aspect)) / DEG;
 }
 
-// n 개 별자리를 고리로 (0번이 정면). 12개면 30도 간격
-export function ringLayout(n: number): Cell[] {
+// n 개 칸을 고리로 (0번이 offset 방위). 12개면 30도 간격
+export function ringLayout(n: number, offset = 0): Cell[] {
     const out: Cell[] = [];
     const step = n > 0 ? 360 / n : RING_STEP;
-    for (let i = 0; i < n; i++) out.push({ az: i * step, elev: RING_ELEV[i % RING_ELEV.length], half: RING_HALF });
+    for (let i = 0; i < n; i++) out.push({ az: offset + i * step, elev: RING_ELEV[i % RING_ELEV.length], half: RING_HALF });
     return out;
 }
 

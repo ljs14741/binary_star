@@ -14,7 +14,7 @@ import Stargazer from "@/components/Stargazer";
 import { api, ensureNickname, getMineIds, langPath, NICK_EVENT, siteOrigin, getNickname } from "@/lib/client";
 import { randomNickname } from "@/lib/nickname";
 import { formatNumber } from "@/lib/format";
-import { HillScene, hasWebGL, type HighlightInfo } from "./HillScene";
+import { HillScene, hasWebGL, WISH_INDEX, type HighlightInfo } from "./HillScene";
 import Tour from "./Tour";
 import { assignRooms, ZODIAC } from "./constellations";
 import { setSoundPref, Sound, soundPref } from "@/lib/sound";
@@ -295,6 +295,7 @@ function Hill3D({ initialTotal }: Props) {
                 onGesture: (g) => bridge.send({ t: "gesture", g }),
                 onGift: (to) => bridge.send({ t: "gift", to }),
                 wishLabel: t("wish_label"),
+                wishSkyLabel: t("wish_sky_title"),
                 onWishGo: () => flash(t("wish_going")),
                 onLookDrag: markDrag,
                 getCardRect: () => cardRef.current?.getBoundingClientRect() ?? null,
@@ -430,6 +431,7 @@ function Hill3D({ initialTotal }: Props) {
     const slots = ZODIAC.map((z, i) => ({ zodiac: z, room: rooms.find((r) => assign.get(r.slug) === i) ?? null }));
     const slot = slots[index];
     const room = slot?.room ?? null;
+    const isWish = index === WISH_INDEX; // 13번째 칸: 달과 풍등이 있는 소원 하늘
     const go = (d: number) => sceneRef.current?.goToRoom(d);
 
     return (
@@ -449,14 +451,14 @@ function Hill3D({ initialTotal }: Props) {
                     <button data-tour="topic" onClick={() => setTopicOpen(true)} aria-label={t("topics_title")} className="flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-center active:scale-[0.98]">
                         <AnimatePresence mode="wait">
                             <motion.h2
-                                key={sky && slot ? index : "none"}
+                                key={sky && (slot || isWish) ? index : "none"}
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -4 }}
                                 transition={{ duration: 0.25 }}
-                                className={`truncate text-lg leading-tight drop-shadow ${room || !sky ? "font-semibold text-ink" : "font-medium text-muted"}`}
+                                className={`truncate text-lg leading-tight drop-shadow ${room || isWish || !sky ? "font-semibold text-ink" : "font-medium text-muted"}`}
                             >
-                                {sky && slot ? (room ? room.title : t("hill_empty_zodiac")) : t("hill_title")}
+                                {sky && isWish ? `🌙 ${t("wish_sky_title")}` : sky && slot ? (room ? room.title : t("hill_empty_zodiac")) : t("hill_title")}
                             </motion.h2>
                         </AnimatePresence>
                         <ChevronDown size={15} className="shrink-0 text-star-soft" />
@@ -474,6 +476,8 @@ function Hill3D({ initialTotal }: Props) {
                             />
                         </span>
                     ))}
+                    {/* 소원 하늘 칸 */}
+                    <span className={`flex h-4 w-5 items-center justify-center text-[11px] leading-none transition-opacity ${isWish ? "opacity-100 drop-shadow-[0_0_6px_rgba(255,216,107,0.8)]" : "opacity-50"}`}>🌙</span>
                 </button>
                 {/* 한 줄: 지금 접속 인원/정원 */}
                 <p className="flex flex-wrap items-center justify-center gap-x-1.5 text-[11px] text-muted">
@@ -717,6 +721,28 @@ function Hill3D({ initialTotal }: Props) {
             {/* 지금 밝아진 별의 첫 문장 (빈 별자리면 안내). 세로(폰)에선 수평선 바로 위(이름표 대신) 라 요정을 안 가림, 가로(PC)는 가운데 */}
             <div className="pointer-events-none absolute inset-x-0 flex justify-center px-5 portrait:top-[var(--hill-horizon,66%)] portrait:-translate-y-[calc(100%+36px)] landscape:top-[54%]">
                 <AnimatePresence mode="wait">
+                    {sky && isWish && (
+                        <motion.div
+                            key="wishsky"
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -6 }}
+                            transition={{ duration: 0.45 }}
+                            className="glass pointer-events-auto max-w-[400px] rounded-2xl px-4 py-3 text-center"
+                        >
+                            <p className="text-[14px] leading-relaxed text-ink">{wishes.count > 0 ? t("wish_count", { n: formatNumber(wishes.count, lang) }) : t("wish_empty")}</p>
+                            <div className="mt-2 flex justify-center gap-2">
+                                {wishes.count > 0 && (
+                                    <button onClick={() => setWishListOpen(true)} className="rounded-full border border-line px-3 py-1 text-[12px] text-ink hover:bg-card-strong">
+                                        {t("wish_all")}
+                                    </button>
+                                )}
+                                <button onClick={() => (sceneRef.current ? sceneRef.current.goWish() : setWishOpen(true))} className="btn-star rounded-full px-3 py-1 text-[12px] font-semibold">
+                                    🏮 {t("wish_button")}
+                                </button>
+                            </div>
+                        </motion.div>
+                    )}
                     {slot && !room && !highlight && (
                         <motion.div
                             key={`nozodiac-${index}`}

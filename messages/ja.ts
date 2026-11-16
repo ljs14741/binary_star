@@ -306,6 +306,7 @@ export const ja: { [K in keyof typeof ko]: string } = {
     bw_go: "行ってみる",
     help_more: "binaryworld のほかの遊び",
     wish_label: "願いの桟橋",
+    wish_sky_title: "願いの空",
     wish_button: "願いごと",
     wish_title: "月に願いごと",
     wish_count: "いま空に灯籠 {n}個",

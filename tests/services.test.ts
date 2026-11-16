@@ -210,6 +210,10 @@ describe("언덕 하늘", () => {
         const cells = ringLayout(12);
         expect(cells.length).toBe(12);
         for (let i = 0; i < 12; i++) expect(cells[i].az).toBeCloseTo(i * 30);
+        // 소원 하늘 13번째 칸이 달 방위(-15)에 오게 돌린 고리
+        const ring = ringLayout(13, -15 - 12 * (360 / 13));
+        expect(azDelta(ring[12].az, -15)).toBeCloseTo(0);
+        expect(azDelta(ring[1].az, ring[0].az)).toBeCloseTo(360 / 13);
         expect(azDelta(350, 10)).toBe(-20);
         expect(azDelta(10, 350)).toBe(20);
         expect(azDelta(180, 0)).toBe(180);

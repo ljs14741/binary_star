@@ -306,6 +306,7 @@ export const en: { [K in keyof typeof ko]: string } = {
     bw_go: "Take me there",
     help_more: "More from binaryworld",
     wish_label: "Wishing pier",
+    wish_sky_title: "Wishing sky",
     wish_button: "Make a wish",
     wish_title: "Make a wish to the moon",
     wish_count: "{n} lanterns in the sky now",
