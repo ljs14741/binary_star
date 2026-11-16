@@ -23,7 +23,6 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     anon_notice: "匿名・免註冊・海外讀者會看到翻譯版",
     test_badge: "測試",
     footer_sister: "binaryworld 的其他服務：",
-    footer_attribution: "位置資料：DB-IP（CC BY 4.0）・只儲存國家與城市名稱，不儲存 IP",
 
     home_title: "為陌生人的故事共鳴",
     home_sub: "讀陌生人的故事、共鳴，也留下你的故事。免註冊。",

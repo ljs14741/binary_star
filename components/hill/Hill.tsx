@@ -235,6 +235,15 @@ function Hill3D({ initialTotal }: Props) {
         [lang],
     );
 
+    const storyScrollRef = useRef<HTMLDivElement>(null);
+    const nextStory = () => {
+        const sc = sceneRef.current;
+        const next = story && sc ? sc.nextStarId(story.id) : null;
+        if (next == null || !sc) return;
+        sc.highlightById(next);
+        void openStory(next).then(() => storyScrollRef.current?.scrollTo({ top: 0 }));
+    };
+
     const closeIntro = () => {
         setIntroDone(true);
         try {
@@ -780,8 +789,12 @@ function Hill3D({ initialTotal }: Props) {
             {/* 별을 눌러 연 이야기 */}
             <BottomSheet open={storyOpen} onClose={() => setStoryOpen(false)} title={t("hill_story_title")}>
                 {story && (
-                    <div className="max-h-[70dvh] overflow-y-auto">
-                        <StoryCard story={story} compact showRoom onHidden={() => setStoryOpen(false)} />
+                    <div ref={storyScrollRef} className="max-h-[70dvh] overflow-y-auto">
+                        <StoryCard key={story.id} story={story} compact showRoom onHidden={() => setStoryOpen(false)} />
+                        {/* 주제 방 페이지처럼 이어 읽기. 하늘에서도 그 별이 반짝임 */}
+                        <button onClick={nextStory} className="mt-3 h-11 w-full rounded-full border border-line text-sm text-ink hover:bg-card-strong active:scale-[0.99]">
+                            {t("story_next")} →
+                        </button>
                     </div>
                 )}
             </BottomSheet>

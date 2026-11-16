@@ -21,6 +21,13 @@ export default async function Page({ params }: P) {
                     {p}
                 </p>
             ))}
+            {/* DB-IP Lite 는 CC BY 4.0 이라 출처 표시가 필요함 (푸터에서 여기로 옮김) */}
+            <p className="mt-6 text-[12px] text-dim">
+                <a href="https://db-ip.com" target="_blank" rel="noopener" className="underline underline-offset-4 hover:text-ink">
+                    IP Geolocation by DB-IP
+                </a>{" "}
+                (CC BY 4.0)
+            </p>
         </article>
     );
 }

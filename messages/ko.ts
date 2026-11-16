@@ -22,7 +22,6 @@ export const ko = {
     anon_notice: "익명 · 가입 없음 · 다른 나라엔 번역돼서 보여요",
     test_badge: "테스트",
     footer_sister: "binaryworld 의 다른 서비스:",
-    footer_attribution: "위치 정보: DB-IP (CC BY 4.0) · 나라·도시 이름만 저장하고 IP 는 저장하지 않아요",
 
     home_title: "모르는 사람의 이야기에 공감하기",
     home_sub: "모르는 사람들의 이야기를 읽고, 공감하고, 내 이야기도 남겨요. 가입 없이.",

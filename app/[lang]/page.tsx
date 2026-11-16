@@ -4,7 +4,6 @@ import { requireLang, alternates } from "@/lib/page";
 import { t } from "@/lib/i18n";
 import { getBaseUrl, siteName } from "@/lib/site";
 import Link from "next/link";
-import { FeaturedBanner } from "@/components/RoomList";
 import Hill from "@/components/hill/Hill";
 import { getPresence } from "@/lib/hill";
 
@@ -22,7 +21,8 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
 export default async function HomePage({ params }: { params: Promise<{ lang: string }> }) {
     const lang = await requireLang(params);
     const [rooms, featured, presence] = await Promise.all([listRooms(lang), getFeaturedRoom(lang), getPresence()]);
-    const list = rooms.filter((r) => r.id !== featured?.id);
+    // 이번 달 주제를 맨 앞에, 작은 표시만 (큰 카드는 무슨 뜻인지 헷갈려서 뺌)
+    const list = featured ? [featured, ...rooms.filter((r) => r.id !== featured.id)] : rooms;
     const jsonLd = {
         "@context": "https://schema.org",
         "@type": "WebSite",
@@ -41,15 +41,11 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
                     <h1 className="text-xl font-semibold leading-snug text-ink">{t(lang, "home_title")}</h1>
                     <p className="mt-1.5 text-sm text-muted">{t(lang, "home_sub")}</p>
                 </section>
-                {featured && (
-                    <div className="mt-4">
-                        <FeaturedBanner room={featured} lang={lang} />
-                    </div>
-                )}
                 <p className="mt-4 flex flex-wrap justify-center gap-x-3 gap-y-1.5 text-[12px] text-dim">
                     {list.map((r) => (
                         <Link key={r.slug} href={`/${lang}/room/${r.slug}`} className="underline-offset-4 hover:text-ink hover:underline">
                             {r.title}
+                            {r.id === featured?.id && <span className="ml-1 text-star-soft">✨{t(lang, "featured_label")}</span>}
                         </Link>
                     ))}
                 </p>

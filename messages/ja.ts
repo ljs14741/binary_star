@@ -23,7 +23,6 @@ export const ja: { [K in keyof typeof ko]: string } = {
     anon_notice: "匿名・登録なし・海外には翻訳して表示されます",
     test_badge: "テスト",
     footer_sister: "binaryworld のほかのサービス:",
-    footer_attribution: "位置情報: DB-IP (CC BY 4.0)・国と都市名のみ保存し、IPは保存しません",
 
     home_title: "知らない誰かの話に共感する",
     home_sub: "知らない人の話を読んで、共感して、自分の話も残そう。登録なしで。",

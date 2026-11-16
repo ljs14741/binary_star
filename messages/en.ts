@@ -23,7 +23,6 @@ export const en: { [K in keyof typeof ko]: string } = {
     anon_notice: "Anonymous · no sign-up · translated for readers abroad",
     test_badge: "TEST",
     footer_sister: "More from binaryworld:",
-    footer_attribution: "Location data: DB-IP (CC BY 4.0) · we store only country and city, never your IP",
 
     home_title: "Feel for strangers' stories",
     home_sub: "Read strangers' stories, feel for them, and leave your own. No sign-up.",

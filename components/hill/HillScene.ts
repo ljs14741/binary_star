@@ -738,6 +738,22 @@ export class HillScene {
         return true;
     }
 
+    // 이야기 창의 "다음 이야기": 같은 별자리 다음 별, 끝이면 별 있는 다음 별자리 첫 별
+    nextStarId(id: number): number | null {
+        const i = this.starIndex.get(id);
+        const n = this.constellations.length;
+        if (i == null || !n) return null;
+        const room = this.starList[i].room;
+        const ids = this.constellations[room]?.starIds ?? [];
+        const k = ids.indexOf(id);
+        if (k >= 0 && k + 1 < ids.length) return ids[k + 1];
+        for (let d = 1; d <= n; d++) {
+            const c = this.constellations[(room + d) % n];
+            if (c.starIds.length) return c.starIds[0];
+        }
+        return null;
+    }
+
     // 특정 별 강조 (문장 카드를 눌렀을 때 등)
     highlightById(id: number) {
         const i = this.starIndex.get(id);

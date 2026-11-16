@@ -24,8 +24,7 @@ export default function SiteFooter() {
                     </a>
                 ))}
             </p>
-            <p>{t("footer_attribution")}</p>
-            <p className="mt-1">© {new Date().getFullYear()} {siteName(lang)} · binaryworld.kr</p>
+            <p>© {new Date().getFullYear()} {siteName(lang)} · binaryworld.kr</p>
         </footer>
     );
 }
