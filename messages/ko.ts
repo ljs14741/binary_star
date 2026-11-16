@@ -168,7 +168,7 @@ export const ko = {
     meta_home_desc: "스무 살의 나에게, 첫사랑에게… 주제 방에서 모르는 사람들의 이야기를 읽고 공감하고, 내 이야기도 남겨요. 가입 없이, 4개 언어로.",
     meta_room_title: "{room} – {site}",
     meta_story_title: "{excerpt} – {site}",
-    meta_story_desc: "공감 {n} · 🌏 {c}개 나라 · {room}",
+    meta_story_desc: "{room} — {text} · 공감 {n}",
 
     about_title: "소개",
     about_body:

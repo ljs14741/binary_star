@@ -30,6 +30,12 @@ export function excerpt(body: string, max = 60): string {
     return sentence.length > max ? sentence.slice(0, max - 1) + "…" : sentence;
 }
 
+// 본문 앞부분 한 줄로 (검색 설명 용)
+export function snippet(body: string, max = 110): string {
+    const flat = body.replace(/\s+/g, " ").trim();
+    return flat.length > max ? flat.slice(0, max - 1) + "…" : flat;
+}
+
 export function daysLeft(until: Date): number {
     return Math.max(0, Math.ceil((until.getTime() - Date.now()) / 86_400_000));
 }

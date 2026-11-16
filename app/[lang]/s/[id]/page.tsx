@@ -5,7 +5,7 @@ import { requireLang, alternates } from "@/lib/page";
 import { t } from "@/lib/i18n";
 import { getBaseUrl, siteName } from "@/lib/site";
 import { getVoterKey } from "@/lib/voter";
-import { excerpt } from "@/lib/format";
+import { excerpt, snippet } from "@/lib/format";
 import StorySwiper from "@/components/StorySwiper";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: P): Promise<Metadata> {
     const story = Number.isFinite(id) ? await getPublicStory(id, lang) : null;
     if (!story) return { title: t(lang, "nf_title"), robots: { index: false } };
     const title = t(lang, "meta_story_title", { excerpt: excerpt(story.body, 40), site: siteName(lang) });
-    const description = t(lang, "meta_story_desc", { n: story.empathyCount, c: story.countryCount, room: story.roomTitle });
+    const description = t(lang, "meta_story_desc", { room: story.roomTitle, text: snippet(story.body), n: story.empathyCount });
     return {
         title: { absolute: title },
         description,

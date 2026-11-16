@@ -169,7 +169,7 @@ export const ja: { [K in keyof typeof ko]: string } = {
     meta_home_desc: "二十歳の自分へ、初恋の人へ… テーマ部屋で知らない人の話を読んで共感し、自分の話も残そう。登録なし、4か国語。",
     meta_room_title: "{room} – {site}",
     meta_story_title: "{excerpt} – {site}",
-    meta_story_desc: "共感 {n}・🌏 {c}か国・{room}",
+    meta_story_desc: "{room} — {text}・共感 {n}",
 
     about_title: "このサイトについて",
     about_body:

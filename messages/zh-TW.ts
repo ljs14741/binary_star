@@ -169,7 +169,7 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     meta_home_desc: "給二十歲的自己、給初戀… 在主題房間讀陌生人的故事、共鳴，也留下你的故事。免註冊，4 種語言。",
     meta_room_title: "{room} – {site}",
     meta_story_title: "{excerpt} – {site}",
-    meta_story_desc: "共鳴 {n}・🌏 {c} 個國家・{room}",
+    meta_story_desc: "{room} — {text}・共鳴 {n}",
 
     about_title: "關於",
     about_body:

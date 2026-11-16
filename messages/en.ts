@@ -169,7 +169,7 @@ export const en: { [K in keyof typeof ko]: string } = {
     meta_home_desc: "To my 20-year-old self, to my first love… Read strangers' stories in topic rooms, feel for them, and leave your own. No sign-up, in 4 languages.",
     meta_room_title: "{room} – {site}",
     meta_story_title: "{excerpt} – {site}",
-    meta_story_desc: "{n} felt this · 🌏 {c} countries · {room}",
+    meta_story_desc: "{room} — {text} · {n} felt this",
 
     about_title: "About",
     about_body:
