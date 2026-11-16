@@ -29,13 +29,16 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     };
 }
 
-// 글꼴 없는 기기(특히 PC)에서 일본어·중국어가 깨지지 않게 언어별 Noto Sans 만 가볍게 연결
+// 글꼴: 한국어·영어 화면은 Pretendard(어느 기기나 같게), 일본어·중국어는 그 언어 Noto Sans.
+// 이야기 본문(편지 같은 글)은 고운바탕. 구글 폰트는 쓰인 글자 조각만 받음
+const GOWUN = "family=Gowun+Batang:wght@400;700";
 const FONT_CSS: Record<Lang, string> = {
-    ko: "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap",
-    en: "https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;600;700&display=swap",
-    ja: "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap",
-    "zh-TW": "https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap",
+    ko: `https://fonts.googleapis.com/css2?${GOWUN}&display=swap`,
+    en: `https://fonts.googleapis.com/css2?${GOWUN}&display=swap`,
+    ja: `https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&${GOWUN}&display=swap`,
+    "zh-TW": `https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&${GOWUN}&display=swap`,
 };
+const PRETENDARD_CSS = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css";
 
 export default async function LangLayout({ children, params }: { children: React.ReactNode; params: Promise<{ lang: string }> }) {
     const { lang } = await params;
@@ -44,6 +47,8 @@ export default async function LangLayout({ children, params }: { children: React
     return (
         <I18nProvider lang={lang} dict={dict}>
             <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+            {(lang === "ko" || lang === "en") && <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />}
+            {(lang === "ko" || lang === "en") && <link rel="stylesheet" href={PRETENDARD_CSS} />}
             <link rel="stylesheet" href={FONT_CSS[lang]} />
             <ToastProvider>
                 <DialogProvider>

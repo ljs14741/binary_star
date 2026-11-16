@@ -242,7 +242,7 @@ export default function StoryCard({ story: initial, sharedFirst, onNext, onHidde
                         <Share2 size={18} />
                     </button>
                     {!story.mine && (
-                        <button onClick={() => setReport(true)} aria-label={t("story_report")} title={t("report_title")} className="flex h-10 items-center justify-center gap-1 rounded-full px-2 text-[11px] text-dim hover:text-ink">
+                        <button onClick={() => setReport(true)} aria-label={t("story_report")} title={t("report_title")} className="flex h-10 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 text-[11px] text-dim hover:text-ink">
                             <Flag size={14} /> {t("story_report_label")}
                         </button>
                     )}
