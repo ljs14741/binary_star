@@ -117,7 +117,9 @@ textarea:focus, input:focus, button:focus-visible, a:focus-visible, select:focus
     transform: translateX(-50%);
     height: calc(100dvh - 3.5rem);
     min-height: 480px;
+    /* hidden 이면 안쪽 sticky 가 안 먹음. clip 은 스크롤 컨테이너를 안 만듦 */
     overflow: hidden;
+    overflow: clip;
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;

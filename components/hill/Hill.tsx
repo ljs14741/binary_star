@@ -412,7 +412,10 @@ function Hill3D({ initialTotal }: Props) {
         <section className="hill-wrap" aria-label={t("hill_title")}>
             <canvas ref={canvasRef} className="hill-canvas" />
 
-            {/* 위: 주제(방) 이름 · 넘기기 · 같이 보는 사람. 별자리 이름은 하늘 이름표에만 작게 */}
+            {/* 위: 주제(방) 이름 · 넘기기 · 같이 보는 사람. 별자리 이름은 하늘 이름표에만 작게
+                페이지를 조금 내려도 헤더 밑에 붙어 따라옴 (높이 0 sticky 틀). 언덕 40% 넘게 내리면 같이 올라감 */}
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-[40%]">
+            <div className="sticky top-14 z-10 h-0">
             <div className="pointer-events-none absolute inset-x-0 top-2 flex flex-col items-center gap-1 px-3">
                 <div className="pointer-events-auto flex w-full max-w-[480px] items-center justify-between">
                     <button onClick={() => go(-1)} aria-label={t("hill_prev")} className="glass rounded-full p-2 text-muted active:scale-95" disabled={rooms.length < 2}>
@@ -422,14 +425,14 @@ function Hill3D({ initialTotal }: Props) {
                     <button onClick={() => setTopicOpen(true)} aria-label={t("topics_title")} className="flex min-w-0 items-center justify-center gap-1 rounded-full px-2 py-0.5 text-center active:scale-[0.98]">
                         <AnimatePresence mode="wait">
                             <motion.h2
-                                key={slot ? index : "none"}
+                                key={sky && slot ? index : "none"}
                                 initial={{ opacity: 0, y: 4 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: -4 }}
                                 transition={{ duration: 0.25 }}
-                                className={`truncate text-lg leading-tight drop-shadow ${room ? "font-semibold text-ink" : "font-medium text-muted"}`}
+                                className={`truncate text-lg leading-tight drop-shadow ${room || !sky ? "font-semibold text-ink" : "font-medium text-muted"}`}
                             >
-                                {slot ? (room ? room.title : t("hill_empty_zodiac")) : t("hill_title")}
+                                {sky && slot ? (room ? room.title : t("hill_empty_zodiac")) : t("hill_title")}
                             </motion.h2>
                         </AnimatePresence>
                         <ChevronDown size={15} className="shrink-0 text-star-soft" />
@@ -536,6 +539,8 @@ function Hill3D({ initialTotal }: Props) {
                         <Coffee size={16} />
                     </button>
                 )}
+            </div>
+            </div>
             </div>
             <BottomSheet open={donateOpen} onClose={() => setDonateOpen(false)} title={t("donate_title")}>
                 <p className="whitespace-pre-line text-[14px] leading-relaxed text-ink/90">{t("donate_body")}</p>
