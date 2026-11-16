@@ -13,7 +13,6 @@
     --color-line: rgba(255, 255, 255, 0.14);
     --color-rose: #ff9bb3;
     --font-sans: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "PingFang TC", "Noto Sans TC", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    --font-story: "Gowun Batang", "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", "Noto Serif TC", "Noto Serif KR", Georgia, serif;
     --shadow-glow: 0 0 40px rgba(255, 216, 107, 0.18);
 }
 
@@ -37,18 +36,12 @@ html[lang="ko"] body, html[lang="en"] body { font-family: "Pretendard Variable",
 
 /* 이야기 본문: 읽기 좋게 */
 .story-body {
-    font-family: var(--font-story);
+    font-family: inherit;
     font-size: 1.125rem;
     line-height: 1.85;
     white-space: pre-wrap;
     word-break: keep-all;
     overflow-wrap: anywhere;
-}
-
-/* 일본어·중국어 글은 그 언어 고딕으로 (고운바탕은 한글 글꼴) */
-.story-body:lang(ja),
-.story-body:lang(zh) {
-    font-family: inherit;
 }
 
 .clamp-3 {

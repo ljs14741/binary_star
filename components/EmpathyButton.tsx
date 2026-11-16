@@ -47,7 +47,7 @@ export default function EmpathyButton({ storyId, count, empathized, mine, size =
             onClick={toggle}
             aria-pressed={empathized}
             className={`relative flex items-center justify-center gap-2 whitespace-nowrap rounded-full font-semibold transition ${
-                lg ? "h-12 flex-1 text-[15px]" : "h-9 px-3 text-sm"
+                lg ? "h-12 min-w-fit flex-1 px-3.5 text-[15px]" : "h-9 px-3 text-sm"
             } ${empathized ? "btn-star" : "glass text-ink hover:bg-card-strong"} ${mine ? "opacity-60" : ""}`}
         >
             <span className="relative">
@@ -66,7 +66,7 @@ export default function EmpathyButton({ storyId, count, empathized, mine, size =
                 </AnimatePresence>
             </span>
             <span>{empathized ? t("story_empathized") : t("story_empathy")}</span>
-            <span className={`relative inline-block h-[1.2em] min-w-[1.2em] overflow-hidden tabular-nums ${empathized ? "" : "text-muted"}`}>
+            <span className={`relative inline-flex h-[1.2em] min-w-[1.2em] items-center justify-center overflow-hidden leading-none tabular-nums ${empathized ? "" : "text-muted"}`}>
                 <AnimatePresence initial={false} mode="popLayout">
                     <motion.span
                         key={count}

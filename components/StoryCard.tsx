@@ -219,7 +219,7 @@ export default function StoryCard({ story: initial, sharedFirst, onNext, onHidde
                     )}
                 </div>
             ) : (
-                <div className="mt-4 flex items-center gap-2">
+                <div className="mt-4 flex items-center gap-1.5">
                     <EmpathyButton
                         storyId={story.id}
                         count={story.empathyCount}
@@ -229,7 +229,7 @@ export default function StoryCard({ story: initial, sharedFirst, onNext, onHidde
                         onChange={(n) => setStory((s) => ({ ...s, empathyCount: n.count, empathized: n.empathized }))}
                     />
                     {!compact && onNext && (
-                        <button onClick={onNext} className="h-12 shrink-0 whitespace-nowrap rounded-full border border-line px-4 text-sm text-ink hover:bg-card-strong">
+                        <button onClick={onNext} className="h-12 shrink-0 whitespace-nowrap rounded-full border border-line px-3.5 text-sm text-ink hover:bg-card-strong">
                             {t("story_next")} →
                         </button>
                     )}
@@ -242,8 +242,8 @@ export default function StoryCard({ story: initial, sharedFirst, onNext, onHidde
                         <Share2 size={18} />
                     </button>
                     {!story.mine && (
-                        <button onClick={() => setReport(true)} aria-label={t("story_report")} title={t("report_title")} className="flex h-10 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-2 text-[11px] text-dim hover:text-ink">
-                            <Flag size={14} /> {t("story_report_label")}
+                        <button onClick={() => setReport(true)} aria-label={t("story_report")} title={t("report_title")} className="flex h-10 shrink-0 items-center justify-center gap-1 whitespace-nowrap rounded-full px-1.5 text-[11px] text-dim hover:text-ink">
+                            <Flag size={14} /> {compact && t("story_report_label")}
                         </button>
                     )}
                 </div>

@@ -29,14 +29,10 @@ export async function generateMetadata({ params }: { params: Promise<{ lang: str
     };
 }
 
-// 글꼴: 한국어·영어 화면은 Pretendard(어느 기기나 같게), 일본어·중국어는 그 언어 Noto Sans.
-// 이야기 본문(편지 같은 글)은 고운바탕. 구글 폰트는 쓰인 글자 조각만 받음
-const GOWUN = "family=Gowun+Batang:wght@400;700";
-const FONT_CSS: Record<Lang, string> = {
-    ko: `https://fonts.googleapis.com/css2?${GOWUN}&display=swap`,
-    en: `https://fonts.googleapis.com/css2?${GOWUN}&display=swap`,
-    ja: `https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&${GOWUN}&display=swap`,
-    "zh-TW": `https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&${GOWUN}&display=swap`,
+// 글꼴: 한국어·영어 화면은 Pretendard(어느 기기나 같게), 일본어·중국어는 그 언어 Noto Sans
+const FONT_CSS: Partial<Record<Lang, string>> = {
+    ja: "https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;600;700&display=swap",
+    "zh-TW": "https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700&display=swap",
 };
 const PRETENDARD_CSS = "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css";
 
@@ -46,10 +42,17 @@ export default async function LangLayout({ children, params }: { children: React
     const dict = getDict(lang);
     return (
         <I18nProvider lang={lang} dict={dict}>
-            <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-            {(lang === "ko" || lang === "en") && <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />}
-            {(lang === "ko" || lang === "en") && <link rel="stylesheet" href={PRETENDARD_CSS} />}
-            <link rel="stylesheet" href={FONT_CSS[lang]} />
+            {FONT_CSS[lang] ? (
+                <>
+                    <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                    <link rel="stylesheet" href={FONT_CSS[lang]} />
+                </>
+            ) : (
+                <>
+                    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossOrigin="anonymous" />
+                    <link rel="stylesheet" href={PRETENDARD_CSS} />
+                </>
+            )}
             <ToastProvider>
                 <DialogProvider>
                     <div className="phone relative flex min-h-dvh flex-col">
