@@ -1734,19 +1734,30 @@ export class HillScene {
         this.walkMarkUntil = this.clock.getElapsedTime() + 1.2;
     }
 
+    // 누른 곳에 있는 별자리 칸. 화면 밖·옆으로 크게 일그러진 칸은 빼고(넓은 PC 화면에서 소원 하늘을 눌러도
+    // 멀리 있는 별자리로 넘어가던 문제), 겹치면 중심이 가장 가까운 칸
     private cellAt(nx: number, ny: number, w: number, h: number): number | null {
         const v = new THREE.Vector3();
+        let best: number | null = null,
+            bestD = Infinity;
         for (const c of this.constellations) {
             const center = starPoint(c.cell, 0, 0, c.scale);
             v.set(center.x, center.y, center.z).add(this.sky.position).project(this.camera);
-            if (v.z > 1) continue;
+            if (v.z > 1 || Math.abs(v.x) > 1.05) continue;
             const edge = starPoint(c.cell, 1, 0, c.scale);
             const ev = new THREE.Vector3(edge.x, edge.y, edge.z).add(this.sky.position).project(this.camera);
-            const rx = Math.abs(ev.x - v.x) * 1.25,
+            if (ev.z > 1) continue;
+            const rx = Math.min(0.45, Math.abs(ev.x - v.x) * 1.25),
                 ry = rx * (w / h) * 1.15 + 0.03;
-            if (Math.abs(nx - v.x) < rx && ny < v.y + ry && ny > v.y - ry * 1.9) return c.index;
+            if (Math.abs(nx - v.x) < rx && ny < v.y + ry && ny > v.y - ry * 1.9) {
+                const d = Math.hypot(nx - v.x, ny - v.y);
+                if (d < bestD) {
+                    bestD = d;
+                    best = c.index;
+                }
+            }
         }
-        return null;
+        return best;
     }
 
     // 확인용: 내 요정 위치
