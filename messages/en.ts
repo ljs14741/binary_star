@@ -5,6 +5,7 @@ export const en: { [K in keyof typeof ko]: string } = {
     nav_home: "Home",
     nav_rooms: "Rooms",
     nav_my: "My stories",
+    my_hint: "Your stories live here. See the hearts you got and where in the world they came from",
     nav_propose: "Suggest a topic",
     nav_guestbook: "Guestbook",
     nav_about: "About",
@@ -27,6 +28,7 @@ export const en: { [K in keyof typeof ko]: string } = {
 
     home_title: "Feel for strangers' stories",
     home_sub: "Read strangers' stories, feel for them, and leave your own. No sign-up.",
+    home_rest: "Take a quiet moment on this little island 🌙",
     featured_label: "This month's topic",
     featured_closes: "Closes {date} · #1 announced on closing day",
     featured_dday: "{n} days left",

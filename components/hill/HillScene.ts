@@ -929,27 +929,32 @@ export class HillScene {
 
     private spawnMeteor(big: boolean) {
         if (this.opts.reduceMotion && !big) return;
-        if (this.meteors.length >= (big ? 3 : 2)) return;
+        if (this.meteors.length >= 3) return;
         const base = this.view / DEG;
-        const p = big ? fromAngles(base + 12, 50, DOME_R * 1.05) : fromAngles(base + (Math.random() * 2 - 1) * 26 + 8, 34 + Math.random() * 24, DOME_R * 1.05);
+        // 보이는 하늘 여기저기서 (좌우 넓게, 높낮이도 섞어서)
+        const p = big ? fromAngles(base + 12, 50, DOME_R * 1.05) : fromAngles(base + (Math.random() * 2 - 1) * 40, 22 + Math.random() * 30, DOME_R * 1.05);
         const start = new THREE.Vector3(p.x, p.y, p.z);
-        // 화면 왼쪽 아래로 (카메라 방향 기준)
+        // 왼쪽 아래 또는 오른쪽 아래로 (카메라 방향 기준), 기울기도 조금씩 다르게
+        const side = big ? -1 : Math.random() < 0.5 ? -1 : 1;
         const right = new THREE.Vector3(Math.cos(this.view), 0, Math.sin(this.view));
-        const vel = right.multiplyScalar(-(big ? 12 : 14 + Math.random() * 10)).add(new THREE.Vector3(0, -(big ? 14 : 9 + Math.random() * 6), 0));
+        const vel = right.multiplyScalar(side * (big ? 12 : 13 + Math.random() * 10)).add(new THREE.Vector3(0, -(big ? 14 : 6 + Math.random() * 9), 0));
         const len = big ? 2.4 : 1.1;
         const geo = new THREE.BufferGeometry().setFromPoints([start, start.clone().sub(vel.clone().multiplyScalar(len * 0.1))]);
-        const mat = new THREE.LineBasicMaterial({ color: big ? 0xfff4d6 : 0xfff0c8, transparent: true, opacity: big ? 1 : 0.8, blending: THREE.AdditiveBlending, depthWrite: false });
+        const mat = new THREE.LineBasicMaterial({ color: big ? 0xfff4d6 : 0xfff0c8, transparent: true, opacity: 1, blending: THREE.AdditiveBlending, depthWrite: false });
         const line = new THREE.Line(geo, mat);
         this.sky.add(line);
-        if (big) {
-            const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glowMe, transparent: true, opacity: 1, depthWrite: false, blending: THREE.AdditiveBlending }));
-            head.scale.set(3.2, 3.2, 1);
+        {
+            // 머리 빛: 작은 별똥별에도 달아서 잘 보이게
+            const head = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.glowMe, transparent: true, opacity: big ? 1 : 0.85, depthWrite: false, blending: THREE.AdditiveBlending }));
+            const hsz = big ? 3.2 : 1.5;
+            head.scale.set(hsz, hsz, 1);
             head.position.copy(start);
             this.sky.add(head);
             line.userData.head = head;
         }
-        this.meteors.push({ line, vel, born: this.clock.getElapsedTime(), life: big ? 2.2 : 1.1, big });
-        this.opts.onSfx(big ? "daily" : "meteor");
+        this.meteors.push({ line, vel, born: this.clock.getElapsedTime(), life: big ? 2.2 : 1.3, big });
+        // 자주 떨어지니 작은 별똥별 소리는 가끔만
+        if (big || Math.random() < 0.35) this.opts.onSfx(big ? "daily" : "meteor");
     }
 
     playDaily(): Promise<void> {
@@ -1757,6 +1762,19 @@ export class HillScene {
                 }
             }
         }
+        // 소원 하늘(달 둘레)도 한 칸으로: 누르면 그쪽으로 돎
+        const mc = fromAngles(MOON_AZ, MOON_ELEV, DOME_R);
+        v.set(mc.x, mc.y, mc.z).add(this.sky.position).project(this.camera);
+        if (v.z < 1 && Math.abs(v.x) <= 1.05) {
+            const me = fromAngles(MOON_AZ + WISH_HALF * 0.8, MOON_ELEV, DOME_R);
+            const ev = new THREE.Vector3(me.x, me.y, me.z).add(this.sky.position).project(this.camera);
+            const rx = Math.min(0.45, Math.abs(ev.x - v.x));
+            const ry = rx * (w / h) * 1.2 + 0.05;
+            if (ev.z < 1 && Math.abs(nx - v.x) < rx && Math.abs(ny - v.y) < ry) {
+                const d = Math.hypot(nx - v.x, ny - v.y);
+                if (d < bestD) best = WISH_INDEX;
+            }
+        }
         return best;
     }
 
@@ -2115,7 +2133,7 @@ export class HillScene {
         // 별똥별
         if (now > this.nextMeteor) {
             this.spawnMeteor(false);
-            this.nextMeteor = now + 9 + Math.random() * 14;
+            this.nextMeteor = now + 2 + Math.random() * 3.5;
         }
         this.meteors = this.meteors.filter((m) => {
             const t = (now - m.born) / m.life;
@@ -2137,12 +2155,16 @@ export class HillScene {
             }
             const pos = m.line.geometry.attributes.position as THREE.BufferAttribute;
             const head = new THREE.Vector3(pos.getX(0), pos.getY(0), pos.getZ(0)).addScaledVector(m.vel, dt);
-            const tail = head.clone().sub(m.vel.clone().multiplyScalar((m.big ? 0.32 : 0.14) * (1 - t * 0.5)));
+            const tail = head.clone().sub(m.vel.clone().multiplyScalar((m.big ? 0.32 : 0.22) * (1 - t * 0.5)));
             pos.setXYZ(0, head.x, head.y, head.z);
             pos.setXYZ(1, tail.x, tail.y, tail.z);
             pos.needsUpdate = true;
-            if (hs) hs.position.copy(head);
-            (m.line.material as THREE.LineBasicMaterial).opacity = (m.big ? 1 : 0.8) * (t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85);
+            const fade = t < 0.15 ? t / 0.15 : 1 - (t - 0.15) / 0.85;
+            if (hs) {
+                hs.position.copy(head);
+                hs.material.opacity = (m.big ? 1 : 0.85) * fade;
+            }
+            (m.line.material as THREE.LineBasicMaterial).opacity = fade;
             return true;
         });
 

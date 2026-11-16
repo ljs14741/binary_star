@@ -5,6 +5,7 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
     nav_home: "首頁",
     nav_rooms: "主題房間",
     nav_my: "我的故事",
+    my_hint: "這裡是你留下的故事，可以看到收到的共鳴和共鳴來自哪些國家",
     nav_propose: "提議新主題",
     nav_guestbook: "留言板",
     nav_about: "關於",
@@ -27,6 +28,7 @@ export const zhTW: { [K in keyof typeof ko]: string } = {
 
     home_title: "為陌生人的故事共鳴",
     home_sub: "讀陌生人的故事、共鳴，也留下你的故事。免註冊。",
+    home_rest: "在無人島上稍微休息一下吧 🌙",
     featured_label: "本月主題",
     featured_closes: "{date} 截止・截止當天公布共鳴第一名",
     featured_dday: "剩 {n} 天",

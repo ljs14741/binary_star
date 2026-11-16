@@ -4,6 +4,7 @@ export const ko = {
     nav_home: "홈",
     nav_rooms: "주제 방",
     nav_my: "내 이야기",
+    my_hint: "내가 남긴 이야기예요. 받은 공감이랑 공감이 온 나라를 여기서 볼 수 있어요",
     nav_propose: "새 주제 제안",
     nav_guestbook: "방명록",
     nav_about: "소개",
@@ -26,6 +27,7 @@ export const ko = {
 
     home_title: "모르는 사람의 이야기에 공감하기",
     home_sub: "모르는 사람들의 이야기를 읽고, 공감하고, 내 이야기도 남겨요. 가입 없이.",
+    home_rest: "무인도에서 잠깐 쉬어 가세요 🌙",
     featured_label: "이번 달 주제",
     featured_closes: "{date} 마감 · 마감 날 공감 1위 발표",
     featured_dday: "D-{n}",

@@ -39,7 +39,8 @@ export default async function HomePage({ params }: { params: Promise<{ lang: str
             <div id="rooms" className="scroll-mt-14 px-4 pt-5">
                 <section className="text-center">
                     <h1 className="text-xl font-semibold leading-snug text-ink">{t(lang, "home_title")}</h1>
-                    <p className="mt-1.5 text-sm text-muted">{t(lang, "home_sub")}</p>
+                    <p className="mt-1.5 break-keep text-sm text-muted">{t(lang, "home_sub")}</p>
+                    <p className="mt-2 text-sm text-star-soft">{t(lang, "home_rest")}</p>
                 </section>
                 <p className="mt-4 flex flex-wrap justify-center gap-x-3 gap-y-1.5 text-[12px] text-dim">
                     {list.map((r) => (

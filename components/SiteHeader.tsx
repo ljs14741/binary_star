@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { LayoutGrid, Sparkles } from "lucide-react";
 import { useLang, useT } from "./I18nProvider";
 import LangSwitcher from "./LangSwitcher";
@@ -10,6 +10,8 @@ import NicknameChip from "./NicknameChip";
 import BottomSheet from "./BottomSheet";
 import { getOwnerToken, langPath, OWNER_EVENT } from "@/lib/client";
 import { siteName, sisterUrl } from "@/lib/site";
+
+const MY_HINT_KEY = "star_my_hint_seen";
 
 function subscribeStorage(cb: () => void) {
     window.addEventListener("storage", cb);
@@ -28,6 +30,27 @@ export default function SiteHeader() {
     const owner = useSyncExternalStore(subscribeStorage, getOwnerToken, () => null);
     const onMe = pathname?.includes("/me/");
     const [bwOpen, setBwOpen] = useState(false);
+    // "내 이야기"는 글을 쓰면 처음 생김 → 그때 한 번만 무엇인지 말풍선 (9초 뒤 또는 누르면 사라짐)
+    const myHintSeen = useSyncExternalStore(subscribeStorage, () => {
+        try {
+            return !!localStorage.getItem(MY_HINT_KEY);
+        } catch {
+            return true;
+        }
+    }, () => true);
+    const [hintClosed, setHintClosed] = useState(false);
+    const showMyHint = !!owner && !onMe && !myHintSeen && !hintClosed;
+    const closeMyHint = () => {
+        setHintClosed(true);
+        try {
+            localStorage.setItem(MY_HINT_KEY, "1");
+        } catch {}
+    };
+    useEffect(() => {
+        if (!showMyHint) return;
+        const tm = setTimeout(closeMyHint, 9000);
+        return () => clearTimeout(tm);
+    }, [showMyHint]);
 
     return (
         <>
@@ -51,9 +74,17 @@ export default function SiteHeader() {
                 </div>
                 <div className="flex min-w-0 items-center gap-1.5 sm:gap-2">
                     {owner && !onMe && (
-                        <Link href={langPath(lang, `/me/${owner}`)} className="shrink-0 whitespace-nowrap rounded-full border border-star/40 px-2.5 py-1 text-xs text-star-soft">
-                            {t("nav_my")}
-                        </Link>
+                        <span className="relative shrink-0">
+                            <Link href={langPath(lang, `/me/${owner}`)} onClick={closeMyHint} className="whitespace-nowrap rounded-full border border-star/40 px-2.5 py-1 text-xs text-star-soft">
+                                {t("nav_my")}
+                            </Link>
+                            {showMyHint && (
+                                <button onClick={closeMyHint} className="fade-in absolute right-0 top-[calc(100%+10px)] z-50 w-56 break-keep rounded-2xl border border-star/40 bg-night px-3 py-2 text-left text-[12px] leading-relaxed text-ink shadow-glow">
+                                    <span className="absolute -top-1.5 right-5 h-3 w-3 rotate-45 border-l border-t border-star/40 bg-night" />
+                                    {t("my_hint")}
+                                </button>
+                            )}
+                        </span>
                     )}
                     <NicknameChip />
                     <LangSwitcher />

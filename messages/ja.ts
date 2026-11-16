@@ -5,6 +5,7 @@ export const ja: { [K in keyof typeof ko]: string } = {
     nav_home: "ホーム",
     nav_rooms: "テーマ部屋",
     nav_my: "わたしの話",
+    my_hint: "あなたが残した話です。届いた共感と、共感が来た国をここで見られます",
     nav_propose: "新しいテーマを提案",
     nav_guestbook: "ゲストブック",
     nav_about: "このサイトについて",
@@ -27,6 +28,7 @@ export const ja: { [K in keyof typeof ko]: string } = {
 
     home_title: "知らない誰かの話に共感する",
     home_sub: "知らない人の話を読んで、共感して、自分の話も残そう。登録なしで。",
+    home_rest: "無人島でちょっとひと休みしていってください 🌙",
     featured_label: "今月のテーマ",
     featured_closes: "{date} 締切・締切日に共感1位を発表",
     featured_dday: "あと{n}日",
