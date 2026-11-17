@@ -336,7 +336,7 @@ export class HillScene {
         wishLabel.scale.set(2.3 * wl.aspect, 2.3, 1);
         this.sky.add(wishLabel);
 
-        // 겨울(12~2월)엔 눈. 움직임 줄이기를 켠 사람에겐 안 내림
+        // 겨울(11~2월)엔 눈. 움직임 줄이기를 켠 사람에겐 안 내림
         if (this.winter && !opts.reduceMotion) {
             this.snow = this.makeSnow(isMobile ? 380 : 750);
             this.scene.add(this.snow);

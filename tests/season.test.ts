@@ -10,9 +10,9 @@ describe("달 모양·계절", () => {
         expect(moonIllumination(0)).toBeCloseTo(0);
         expect(moonIllumination(0.5)).toBeCloseTo(1);
     });
-    it("눈은 한국 시간 12~2월", () => {
-        expect(isSnowSeason(new Date("2026-12-01T00:30:00+09:00"))).toBe(true);
-        expect(isSnowSeason(new Date("2026-11-30T23:30:00+09:00"))).toBe(false);
+    it("눈은 한국 시간 11~2월", () => {
+        expect(isSnowSeason(new Date("2026-11-01T00:30:00+09:00"))).toBe(true);
+        expect(isSnowSeason(new Date("2026-10-31T23:30:00+09:00"))).toBe(false);
         expect(isSnowSeason(new Date("2027-02-28T12:00:00+09:00"))).toBe(true);
         expect(isSnowSeason(new Date("2027-03-01T00:10:00+09:00"))).toBe(false);
     });

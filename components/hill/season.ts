@@ -14,8 +14,8 @@ export function moonIllumination(phase: number): number {
     return (1 - Math.cos(phase * Math.PI * 2)) / 2;
 }
 
-// 한국 시간 12~2월엔 눈
+// 한국 시간 11~2월엔 눈 (3월쯤 실제 날씨로 바꿀 예정)
 export function isSnowSeason(d: Date = new Date()): boolean {
     const m = new Date(d.getTime() + 9 * 3600 * 1000).getUTCMonth() + 1;
-    return m === 12 || m <= 2;
+    return m >= 11 || m <= 2;
 }
