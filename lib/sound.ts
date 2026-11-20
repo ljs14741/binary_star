@@ -40,7 +40,7 @@ const SILENT_NIGHT: [number, number][] = [
 ];
 // 마디(6/8)마다 낮은 반주 근음 (반음)
 const SN_BASS = [0, 0, 7, 0, 5, 0, 5, 0, 7, 0, 0, 0];
-const EIGHTH = 0.34; // 8분음표 길이(초)
+const EIGHTH = 0.46; // 8분음표 길이(초). 느긋하게
 const SN_REST = 5; // 한 번 끝나고 쉬는 시간(초)
 type Note = { at: number; f: number; v: number; d: number };
 const SONG: Note[] = (() => {

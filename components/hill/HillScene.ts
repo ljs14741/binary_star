@@ -810,8 +810,7 @@ export class HillScene {
         this.highlightCursor++;
         const i = this.starIndex.get(c.starIds[this.highlightCursor]);
         if (i != null) {
-            this.setHighlight(i);
-            this.opts.onSfx("twinkle");
+            this.setHighlight(i); // 소리 없음 (넘어갈 때마다 띵 소리가 거슬림)
         }
         return HIGHLIGHT_EVERY;
     }
