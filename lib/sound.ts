@@ -1,5 +1,6 @@
 "use client";
-// 언덕 소리: 파일 없이 WebAudio 로 합성. 효과음만(공감·새 별·별똥별·의식·반짝임). 배경음은 폰 스피커에서 이상하게 들려 뺌
+// 언덕 소리: 파일 없이 WebAudio 로 합성. 효과음(공감·새 별·별똥별·의식·반짝임) + 겨울엔 오르골 '고요한 밤'
+// 예전 낮은 배경음은 폰 스피커에서 이상하게 들려 뺐음. 오르골은 높고 맑은 소리라 폰에서도 괜찮음
 // 브라우저 자동재생 제한 때문에 start() 는 반드시 사용자 입력(터치·클릭·키) 안에서 불러야 함
 
 export type Sfx = "empathy" | "empathyFar" | "born" | "meteor" | "daily" | "twinkle" | "lighthouse" | "lantern" | "lanternFar";
@@ -22,12 +23,51 @@ export function setSoundPref(on: boolean) {
 // 펜타토닉 (A 단조 느낌): 반짝임에 씀
 const PENTA = [440, 523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66];
 
+// 오르골: '고요한 밤'(그루버, 1818, 저작권 없음). [음(C장조 반음, 0 = 도), 8분음표 길이] — 실제 소리는 한 옥타브 위
+const SILENT_NIGHT: [number, number][] = [
+    [7, 1.5], [9, 0.5], [7, 1], [4, 3],
+    [7, 1.5], [9, 0.5], [7, 1], [4, 3],
+    [14, 2], [14, 1], [11, 3],
+    [12, 2], [12, 1], [7, 3],
+    [9, 2], [9, 1], [12, 1.5], [11, 0.5], [9, 1],
+    [7, 1.5], [9, 0.5], [7, 1], [4, 3],
+    [9, 2], [9, 1], [12, 1.5], [11, 0.5], [9, 1],
+    [7, 1.5], [9, 0.5], [7, 1], [4, 3],
+    [14, 2], [14, 1], [17, 1.5], [14, 0.5], [11, 1],
+    [12, 3], [16, 3],
+    [12, 1], [7, 1], [4, 1], [7, 1.5], [5, 0.5], [2, 1],
+    [0, 6],
+];
+// 마디(6/8)마다 낮은 반주 근음 (반음)
+const SN_BASS = [0, 0, 7, 0, 5, 0, 5, 0, 7, 0, 0, 0];
+const EIGHTH = 0.34; // 8분음표 길이(초)
+const SN_REST = 5; // 한 번 끝나고 쉬는 시간(초)
+type Note = { at: number; f: number; v: number; d: number };
+const SONG: Note[] = (() => {
+    const notes: Note[] = [];
+    const hz = (semi: number, oct: number) => 261.63 * Math.pow(2, semi / 12 + oct);
+    let t = 0;
+    for (const [n, len] of SILENT_NIGHT) {
+        notes.push({ at: t * EIGHTH, f: hz(n, 1), v: 0.11, d: 1.8 });
+        t += len;
+    }
+    SN_BASS.forEach((b, bar) => {
+        notes.push({ at: bar * 6 * EIGHTH, f: hz(b, 0), v: 0.05, d: 2.2 });
+        notes.push({ at: (bar * 6 + 3) * EIGHTH, f: hz(b + 7, 0), v: 0.035, d: 1.8 });
+    });
+    return notes.sort((a, b) => a.at - b.at);
+})();
+const SONG_LEN = 12 * 6 * EIGHTH + SN_REST;
+
 export class Sound {
     private ctx: AudioContext | null = null;
     private master: GainNode | null = null;
     private running = false;
     private noise: AudioBuffer | null = null;
     private lastSfx = new Map<Sfx, number>();
+    private musicWanted = false;
+    private music: { gain: GainNode; timer: ReturnType<typeof setInterval>; t0: number; i: number } | null = null;
+    private musicLevel = 0.5; // 0~1. 트리에 가까울수록 큼
 
     get on(): boolean {
         return this.running;
@@ -71,6 +111,7 @@ export class Sound {
             this.master!.gain.cancelScheduledValues(now);
             this.master!.gain.setValueAtTime(this.master!.gain.value, now);
             this.master!.gain.linearRampToValueAtTime(0.8, now + 1.2);
+            if (this.musicWanted) this.startMusic();
         } catch {
             this.running = false;
         }
@@ -83,6 +124,62 @@ export class Sound {
         this.master.gain.cancelScheduledValues(now);
         this.master.gain.setValueAtTime(this.master.gain.value, now);
         this.master.gain.linearRampToValueAtTime(0, now + 1.2);
+        this.stopMusic();
+    }
+
+    // 오르골 배경음을 틀지 (겨울에만 켬). 소리가 켜져 있을 때만 실제로 남
+    setMusic(want: boolean) {
+        this.musicWanted = want;
+        if (want && this.running) this.startMusic();
+        if (!want) this.stopMusic();
+    }
+
+    // 트리와의 거리(월드)로 오르골 크기. 멀면 작게 깔리고 트리 옆이면 또렷하게
+    setMusicNear(dist: number | null) {
+        const k = dist == null ? 0.4 : Math.max(0, Math.min(1, 1 - (dist - 1.5) / 8));
+        if (Math.abs(k - this.musicLevel) < 0.02) return;
+        this.musicLevel = k;
+        if (this.music && this.ctx) this.music.gain.gain.setTargetAtTime(this.musicGain(), this.ctx.currentTime, 0.6);
+    }
+
+    private musicGain() {
+        return 0.35 + 0.65 * this.musicLevel;
+    }
+
+    private startMusic() {
+        if (this.music || !this.ctx || !this.master) return;
+        const ctx = this.ctx;
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0, ctx.currentTime);
+        gain.gain.linearRampToValueAtTime(this.musicGain(), ctx.currentTime + 3);
+        gain.connect(this.master);
+        const m = { gain, timer: 0 as unknown as ReturnType<typeof setInterval>, t0: ctx.currentTime + 1.5, i: 0 };
+        // 1초 앞까지 미리 예약 (화면 숨기면 ctx 가 멈춰 시간도 멈춤)
+        const tick = () => {
+            const now = ctx.currentTime;
+            for (;;) {
+                const n = SONG[m.i % SONG.length];
+                const at = m.t0 + Math.floor(m.i / SONG.length) * SONG_LEN + n.at;
+                if (at > now + 1) break;
+                if (at > now - 0.05) this.bell(n.f, at, n.v, 0, n.d, gain);
+                m.i++;
+            }
+        };
+        tick();
+        m.timer = setInterval(tick, 250);
+        this.music = m;
+    }
+
+    private stopMusic() {
+        const m = this.music;
+        if (!m || !this.ctx) return;
+        this.music = null;
+        clearInterval(m.timer);
+        const now = this.ctx.currentTime;
+        m.gain.gain.cancelScheduledValues(now);
+        m.gain.gain.setValueAtTime(m.gain.gain.value, now);
+        m.gain.gain.linearRampToValueAtTime(0, now + 1.2);
+        setTimeout(() => m.gain.disconnect(), 3000);
     }
 
     // 화면 숨길 때 잠깐 멈춤

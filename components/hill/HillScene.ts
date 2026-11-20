@@ -1103,6 +1103,12 @@ export class HillScene {
         this.tree.flare(this.clock.getElapsedTime());
     }
 
+    // 내 요정과 트리 사이 거리 (오르골 소리 크기용). 아직 없으면 null
+    treeDistance(): number | null {
+        const me = this.meId != null ? this.people.get(this.meId) : null;
+        return me ? Math.hypot(me.pos.x - TREE_POS.x, me.pos.y - TREE_POS.z) : null;
+    }
+
     // 부두 끝으로 걸어가기 (버튼·부두 누르기). 도착하면 달을 보고 onWishArrive
     goWish() {
         const me = this.meId != null ? this.people.get(this.meId) : null;
@@ -1907,7 +1913,7 @@ export class HillScene {
 
         this.scenery.update(now, dt, this.view);
         this.exportHorizon();
-        this.tree.update(now, this.view, this.renderer.domElement.height);
+        this.tree.update(now, this.renderer.domElement.height);
         if (this.snow) {
             this.snow.position.set(cx, 0, cz);
             (this.snow.material as THREE.ShaderMaterial).uniforms.uTime.value = now;

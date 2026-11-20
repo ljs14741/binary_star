@@ -19,6 +19,7 @@ import Tour from "./Tour";
 import { assignRooms, ZODIAC } from "./constellations";
 import { setSoundPref, Sound, soundPref } from "@/lib/sound";
 import { useHillSocket } from "./useHillSocket";
+import { isSnowSeason } from "./season";
 import ShareSheet from "@/components/ShareSheet";
 import DonorWall from "@/components/DonorWall";
 import CrisisNotice from "@/components/CrisisNotice";
@@ -356,7 +357,13 @@ function Hill3D({ initialTotal }: Props) {
                 );
             }
         }
+        // 겨울엔 오르골. 내 요정이 트리에 가까울수록 크게
+        const winter = isSnowSeason();
+        sound.setMusic(winter);
+        const musicTimer = winter ? setInterval(() => sound.setMusicNear(scene.treeDistance()), 500) : null;
         return () => {
+            if (musicTimer) clearInterval(musicTimer);
+            sound.setMusic(false);
             bridge.clear();
             scene.dispose();
             sceneRef.current = null;

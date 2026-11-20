@@ -8,7 +8,7 @@
 - 테스트 61 · lint · build 통과. 개발 서버 `npm run dev`(localhost:3100). 운영은 **클라우드플레어 경유**. 상세 `docs/DEPLOY.md`
 - 결정: **Claude API 키 없이 운영**(기본 필터+신고+관리자). 글은 언어 상관없이 다 보임. **백업 안 함 → 시키지 않은 삭제·파괴적 DB 작업 금지**
 - 관리자 `/admin`(키 → 90일 쿠키): 실시간 언덕 현황·글/소원/방명록 숨기기·답글·주제 교체·후원
-- 첫 화면 3D 섬(무인도라고 부름): 하늘 고리 = 별자리 12 + 🌙소원 하늘 1(`WISH_INDEX`=12, 달·풍등은 그 칸에만, 부두 방향 az -15). 주제 판(제목 누르면), 감정 표현, 하트, 소원 부두→풍등, 크리스마스트리(`tree.ts`·`TREE_POS`, 없앨 땐 요청 받아서), 실제 달 모양·11~2월 눈(`season.ts`)
+- 첫 화면 3D 섬(무인도라고 부름): 하늘 고리 = 별자리 12 + 🌙소원 하늘 1(`WISH_INDEX`=12, 달·풍등은 그 칸에만, 부두 방향 az -15). 주제 판(제목 누르면), 감정 표현, 하트, 소원 부두→풍등, 크리스마스트리(`tree.ts`·`TREE_POS`, 3D 낮은 다각형, 없앨 땐 요청 받아서), 11~2월 오르골 '고요한 밤'(`lib/sound.ts` `setMusic`, 소리 켠 사람만, 트리 가까울수록 큼), 실제 달 모양·11~2월 눈(`season.ts`)
 - 주제 배치 `constellations.ts` `BY_SLUG`: 2번째 = 엄마·아빠에게, 빈 별자리 = 6번째(처녀자리, 첫 사용자 제안 몫)
 - 첫 안내 = 환영 한 장 + 버튼 가리키는 5단계(`Tour.tsx`, `data-tour`, ? 창에서 다시 보기)
 - 방명록 `/guestbook`(테이블 `guestbook`). 검수 `lib/moderation.ts`(오탐 예외·광고 낱말·한글 사이 숫자 우회, 테스트에 사례). 웹소켓 브라우저당 3·IP당 30
@@ -38,7 +38,8 @@
 - Prisma 스키마 바꾸면 migration SQL 을 손으로 쓰고 `npx prisma migrate deploy && npx prisma generate`(dev DB = 운영 DB, 추가만 할 것)
 - React lint: 렌더 중 `useRef.current` 읽기·컴포넌트 정의 금지
 - 하늘 위 요소는 폰 헤더에 가림 → 고도 48도 아래. 세로 화면은 카메라가 3.2 앞, 부두에 서면 더 다가감(이름표는 화면 24px 상한)
-- 트리 몸통은 불투명(alphaTest)으로 깊이를 씀 → 뒤 요정만 가려짐. 투명+renderOrder 로 바꾸면 앞 요정까지 덮음
+- 트리 몸통은 불투명 3D 기하(꼭짓점 색에 그늘을 구움, 장면에 조명 없음) → 깊이로 뒤 요정·뒤쪽 전구만 가려짐. 투명+renderOrder 로 바꾸면 앞 요정까지 덮음
+- 서버 PC 에 '진뚜' 상주 요정(`/home/binary/star_bot/jindu.mjs`, 저장소 밖, 재부팅하면 다시 켜야 함). 접속자 수에 1 로 잡힘
 - 카메라는 모닥불 둘레를 돎(`ORBIT_R`). 하늘 물체는 `this.sky` 그룹에 넣어야 카메라를 따라감(별 화면좌표 계산 때 `sky.position` 더함). 자리 배정도 불 둘레 원형
 - Claude 는 docker 그룹 아님, `sudo` 불가, Caddyfile 은 root 소유(수정은 `Caddyfile.new` 만들어 사용자가 cp+reload). compose(`/home/binary/binaryworld/infra/docker-compose.yml`)는 수정 가능
 - 클라우드플레어 뒤라 Caddy `trusted_proxies` 필수(없으면 모든 IP 가 HK). 앱은 X-Forwarded-For 첫 값 사용
