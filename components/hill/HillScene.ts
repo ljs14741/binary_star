@@ -953,8 +953,8 @@ export class HillScene {
             line.userData.head = head;
         }
         this.meteors.push({ line, vel, born: this.clock.getElapsedTime(), life: big ? 2.2 : 1.3, big });
-        // 자주 떨어지니 작은 별똥별 소리는 가끔만
-        if (big || Math.random() < 0.35) this.opts.onSfx(big ? "daily" : "meteor");
+        // 작은 별똥별은 소리 없음 (가만히 있을 때 쉬익 소리가 거슬림). 의식 때 큰 별똥별만
+        if (big) this.opts.onSfx("daily");
     }
 
     playDaily(): Promise<void> {
